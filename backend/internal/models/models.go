@@ -12,10 +12,36 @@ var EstadosValidos = map[string]bool{
 	"extraviado":       true,
 }
 
-var TiposComponenteValidos = map[string]bool{
-	"Ventilador": true, "SSD": true, "HDD": true, "RAM": true, "Bateria": true,
+var TiposValidos = map[string]bool{
+	// Equipos principales
+	"Desktop": true, "Laptop": true, "Servidor": true, "Tablet": true, "Monitor": true,
+	"Proyector": true, "Impresora": true, "Scanner": true, "Router": true, "Switch": true,
+	"Access Point": true, "Firewall": true, "NAS": true, "UPS": true, "Regulador": true,
+	"Telefono IP": true, "Camara IP": true, "Disco Externo": true, "Otro": true,
+	// Componentes también válidos como item independiente (cables, discos...)
+	"Ventilador": true, "SSD": true, "HDD": true, "NVMe": true, "RAM": true, "Bateria": true,
 	"Fuente": true, "Placa": true, "CPU": true, "GPU": true, "Teclado": true,
-	"Pantalla": true, "Cargador": true, "Otro": true,
+	"Pantalla": true, "Cargador": true, "Disco": true,
+	"Cable Poder": true, "Cable HDMI": true, "Cable VGA": true, "Cable DisplayPort": true,
+	"Cable Ethernet": true, "Cable USB": true, "Cable SATA": true, "Patch Cord": true, "Adaptador": true,
+	"Bateria UPS": true, "Fusible": true, "Tarjeta Red": true, "Mouse": true, "Parlante": true, "Microfono": true, "Camara": true, "Disipador": true,
+}
+
+var TiposComponenteValidos = map[string]bool{
+	// Computo interno
+	"Ventilador": true, "SSD": true, "HDD": true, "NVMe": true, "RAM": true, "Bateria": true,
+	"Fuente": true, "Placa": true, "CPU": true, "GPU": true, "Teclado": true,
+	"Pantalla": true, "Cargador": true,
+	// Almacenamiento / discos
+	"Disco": true, "Disco Externo": true,
+	// Cables
+	"Cable Poder": true, "Cable HDMI": true, "Cable VGA": true, "Cable DisplayPort": true,
+	"Cable Ethernet": true, "Cable USB": true, "Cable SATA": true, "Patch Cord": true, "Adaptador": true,
+	// Energia / regulacion
+	"Regulador": true, "UPS": true, "Bateria UPS": true, "Fusible": true,
+	// Red / perifericos
+	"Tarjeta Red": true, "Mouse": true, "Parlante": true, "Microfono": true, "Camara": true, "Disipador": true,
+	"Otro": true,
 }
 
 var TiposMovimientoValidos = map[string]bool{
@@ -29,6 +55,13 @@ var TiposMovimientoValidos = map[string]bool{
 
 func EsEstadoValido(estado string) bool {
 	return EstadosValidos[estado]
+}
+
+func EsTipoValido(t string) bool {
+	if t == "" {
+		return true
+	}
+	return TiposValidos[t]
 }
 
 func EsTipoComponenteValido(t string) bool {

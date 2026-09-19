@@ -319,12 +319,25 @@ export default function DispositivoDetail({ id: propId }) {
             <div>
               <label className="text-xs font-semibold text-slate-600">Tipo *</label>
               <select name="tipo" defaultValue={dispositivo.tipo} className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+                <option>Desktop</option>
                 <option>Laptop</option>
-                <option>Monitor</option>
-                <option>Impresora</option>
-                <option>Router</option>
                 <option>Servidor</option>
                 <option>Tablet</option>
+                <option>Monitor</option>
+                <option>Proyector</option>
+                <option>Impresora</option>
+                <option>Scanner</option>
+                <option>Router</option>
+                <option>Switch</option>
+                <option>Access Point</option>
+                <option>Firewall</option>
+                <option>NAS</option>
+                <option>UPS</option>
+                <option>Regulador</option>
+                <option>Telefono IP</option>
+                <option>Camara IP</option>
+                <option>Disco Externo</option>
+                <option>Cargador</option>
                 <option>Otro</option>
               </select>
             </div>
@@ -391,6 +404,7 @@ export default function DispositivoDetail({ id: propId }) {
                 <option>Ventilador</option>
                 <option>SSD</option>
                 <option>HDD</option>
+                <option>NVMe</option>
                 <option>RAM</option>
                 <option>Bateria</option>
                 <option>Fuente</option>
@@ -400,6 +414,27 @@ export default function DispositivoDetail({ id: propId }) {
                 <option>Teclado</option>
                 <option>Pantalla</option>
                 <option>Cargador</option>
+                <option>Disco</option>
+                <option>Disco Externo</option>
+                <option>Cable Poder</option>
+                <option>Cable HDMI</option>
+                <option>Cable VGA</option>
+                <option>Cable DisplayPort</option>
+                <option>Cable Ethernet</option>
+                <option>Cable USB</option>
+                <option>Cable SATA</option>
+                <option>Patch Cord</option>
+                <option>Adaptador</option>
+                <option>Regulador</option>
+                <option>UPS</option>
+                <option>Bateria UPS</option>
+                <option>Fusible</option>
+                <option>Tarjeta Red</option>
+                <option>Mouse</option>
+                <option>Parlante</option>
+                <option>Microfono</option>
+                <option>Camara</option>
+                <option>Disipador</option>
                 <option>Otro</option>
               </select>
             </div>

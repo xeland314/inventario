@@ -242,6 +242,10 @@ func (h *DispositivoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "estado no válido. Valores: activo, disponible, reserva, en_mantenimiento, en_reparacion, averiado, obsoleto, dado_de_baja, extraviado", http.StatusBadRequest)
 		return
 	}
+	if !models.EsTipoValido(req.Tipo) {
+		http.Error(w, "tipo no válido", http.StatusBadRequest)
+		return
+	}
 	if req.TipoComponente != nil && *req.TipoComponente != "" && !models.EsTipoComponenteValido(*req.TipoComponente) {
 		http.Error(w, "tipo_componente no válido", http.StatusBadRequest)
 		return
@@ -413,6 +417,10 @@ func (h *DispositivoHandler) Actualizar(w http.ResponseWriter, r *http.Request) 
 		args = append(args, *req.NumeroSerie)
 	}
 	if req.Tipo != nil {
+		if !models.EsTipoValido(*req.Tipo) {
+			http.Error(w, "tipo no válido", http.StatusBadRequest)
+			return
+		}
 		sets = append(sets, "tipo = ?")
 		args = append(args, *req.Tipo)
 	}
