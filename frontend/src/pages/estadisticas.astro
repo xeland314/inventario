@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EstadisticasPanel from '../components/EstadisticasPanel';
+---
+<Layout title="Estadísticas">
+  <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <header>
+      <h1 class="text-3xl font-black text-slate-900">📊 Estadísticas</h1>
+      <p class="text-sm text-slate-500 mt-1">Panel /api/estadisticas — valor inventario, costos, tintas, obsolescencia y planes</p>
+    </header>
+    <EstadisticasPanel client:load />
+  </main>
+</Layout>
