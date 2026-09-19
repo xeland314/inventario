@@ -191,14 +191,26 @@ import Layout from '../../layouts/Layout.astro';
       msg.textContent = 'Guardando...';
       msg.className = 'text-sm text-slate-500 text-center';
       const res = await fetch('/api/dispositivos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)});
-      const data = await res.json().catch(()=>({}));
+      let data = {};
+      let errorText = '';
+      try {
+        data = await res.clone().json();
+        errorText = data.error || data.message || JSON.stringify(data);
+      } catch {
+        errorText = await res.text();
+      }
       if (res.ok) {
         msg.textContent = '✓ Creado correctamente. Redirigiendo...';
         msg.className = 'text-sm text-emerald-600 text-center';
         setTimeout(() => location.href = `/dispositivos/${data.id}`, 600);
       } else {
-        msg.textContent = 'Error: ' + (data.error || JSON.stringify(data));
-        msg.className = 'text-sm text-rose-600 text-center';
+        if (res.status === 409 && errorText.includes('UNIQUE')) {
+          errorText = `El código "${payload.codigo_activo}" ya existe (CO1431MT042300119 es un Parlante registrado). Usa un código único o edita el existente.`;
+        } else if (!errorText || errorText === '{}') {
+          errorText = `Error ${res.status} — verifica campos obligatorios (código, serie, tipo, marca, modelo)`;
+        }
+        msg.textContent = 'Error: ' + errorText;
+        msg.className = 'text-sm text-rose-600 text-center whitespace-pre-wrap';
       }
     });
   </script>
