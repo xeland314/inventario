@@ -53,6 +53,21 @@ var TiposMovimientoValidos = map[string]bool{
 	"retiro":         true,
 }
 
+var RolesValidos = map[string]bool{
+	"tecnico": true,
+	"lector":  true,
+}
+
+func EsRolValido(r string) bool { return RolesValidos[r] }
+
+var EstadosReporteValidos = map[string]bool{
+	"abierto":   true,
+	"cancelado": true,
+	"resuelto":  true,
+}
+
+func EsEstadoReporteValido(s string) bool { return EstadosReporteValidos[s] }
+
 func EsEstadoValido(estado string) bool {
 	return EstadosValidos[estado]
 }
@@ -174,4 +189,32 @@ type TintasUpdateRequest struct {
 		NivelPorcentaje int    `json:"nivel_porcentaje"`
 		CodigoTinta     *int   `json:"codigo_tinta"`
 	} `json:"tintas"`
+}
+
+// Auth token-based
+type Usuario struct {
+	ID         string  `json:"id"`
+	Username   string  `json:"username"`
+	Rol        string  `json:"rol"`
+	CreadoEn   string  `json:"creado_en"`
+	Activo     int     `json:"activo"`
+}
+
+type Sesion struct {
+	ID       string `json:"id"`
+	UserID   string `json:"user_id"`
+	Token    string `json:"token"`
+	CreadoEn string `json:"creado_en"`
+}
+
+type Reporte struct {
+	ID            string  `json:"id"`
+	DispositivoID *string `json:"dispositivo_id"`
+	EtiquetaID    *string `json:"etiqueta_id"`
+	CreadoPor     string  `json:"creado_por"`
+	Descripcion   string  `json:"descripcion"`
+	Estado        string  `json:"estado"`
+	CreadoEn      string  `json:"creado_en"`
+	CanceladoEn   *string `json:"cancelado_en"`
+	Username      *string `json:"username,omitempty"`
 }

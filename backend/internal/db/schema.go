@@ -95,6 +95,39 @@ CREATE INDEX IF NOT EXISTS idx_dispositivos_ubicacion ON dispositivos(ubicacion)
 CREATE INDEX IF NOT EXISTS idx_movimientos_dispositivo ON movimientos(dispositivo_id);
 CREATE INDEX IF NOT EXISTS idx_etiquetas_estado ON etiquetas(estado);
 CREATE INDEX IF NOT EXISTS idx_etiquetas_dispositivo ON etiquetas(dispositivo_id);
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    rol TEXT NOT NULL CHECK (rol IN ('tecnico','lector')),
+    creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+    activo INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS sesiones (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    creado_en TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS reportes (
+    id TEXT PRIMARY KEY,
+    dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL,
+    etiqueta_id TEXT REFERENCES etiquetas(id) ON DELETE SET NULL,
+    creado_por TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    descripcion TEXT NOT NULL,
+    estado TEXT NOT NULL CHECK (estado IN ('abierto','cancelado','resuelto')) DEFAULT 'abierto',
+    creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+    cancelado_en TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_sesiones_token ON sesiones(token);
+CREATE INDEX IF NOT EXISTS idx_sesiones_user ON sesiones(user_id);
+CREATE INDEX IF NOT EXISTS idx_reportes_dispositivo ON reportes(dispositivo_id);
+CREATE INDEX IF NOT EXISTS idx_reportes_creador ON reportes(creado_por);
+CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id);
 `
 
 func InitDB(database *sql.DB) error {
@@ -186,11 +219,21 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_movimientos_destino ON movimientos(destino_parent_id)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_etiquetas_estado ON etiquetas(estado)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_etiquetas_dispositivo ON etiquetas(dispositivo_id)`)
+	// Auth + reportes (token-based)
+	database.Exec(`CREATE TABLE IF NOT EXISTS usuarios (id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, rol TEXT NOT NULL CHECK (rol IN ('tecnico','lector')), creado_en TEXT NOT NULL DEFAULT (datetime('now')), activo INTEGER NOT NULL DEFAULT 1)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS sesiones (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE, token TEXT UNIQUE NOT NULL, creado_en TEXT NOT NULL DEFAULT (datetime('now')))`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS reportes (id TEXT PRIMARY KEY, dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL, etiqueta_id TEXT REFERENCES etiquetas(id) ON DELETE SET NULL, creado_por TEXT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE, descripcion TEXT NOT NULL, estado TEXT NOT NULL CHECK (estado IN ('abierto','cancelado','resuelto')) DEFAULT 'abierto', creado_en TEXT NOT NULL DEFAULT (datetime('now')), cancelado_en TEXT)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_sesiones_token ON sesiones(token)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_sesiones_user ON sesiones(user_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_reportes_dispositivo ON reportes(dispositivo_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_reportes_creador ON reportes(creado_por)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)`)
 
 	// Asegurar foreign_keys activado por conexión
 	if _, err := database.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
 		log.Printf("WARN: no se pudo activar foreign_keys: %v", err)
 	}
-	log.Println("✓ Esquema SQLite inicializado (6 tablas, índices y FKs)")
+	log.Println("✓ Esquema SQLite inicializado (9 tablas, índices y FKs)")
 	return nil
 }

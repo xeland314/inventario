@@ -11,7 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/google/uuid"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 
 	dbpkg "inventario-backend/internal/db"
 	"inventario-backend/internal/handlers"
@@ -22,6 +24,29 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func seedDefaultAdmin(db *sql.DB) {
+	var cnt int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM usuarios`).Scan(&cnt); err != nil {
+		log.Printf("WARN seed check: %v", err)
+		return
+	}
+	if cnt > 0 {
+		return
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte("Admin123!"), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("WARN seed hash: %v", err)
+		return
+	}
+	id := uuid.NewString()
+	_, err = db.Exec(`INSERT INTO usuarios (id, username, password_hash, rol, activo) VALUES (?, ?, ?, 'tecnico', 1)`, id, "admin", string(hash))
+	if err != nil {
+		log.Printf("WARN seed insert: %v", err)
+		return
+	}
+	log.Printf("✓ Usuario admin creado (username: admin password: Admin123! rol: tecnico)")
 }
 
 func main() {
@@ -45,6 +70,7 @@ func main() {
 	if err := dbpkg.InitDB(database); err != nil {
 		log.Fatal(err)
 	}
+	seedDefaultAdmin(database)
 
 	os.MkdirAll(storageFolder, 0700)
 	os.MkdirAll("./uploads/pdf", 0755)
@@ -56,6 +82,8 @@ func main() {
 	evHandler := &handlers.EvidenciaHandler{DB: database, MasterKey: []byte(encryptionKey), StorageFolder: storageFolder}
 	movHandler := &handlers.MovimientoHandler{DB: database}
 	etiquetaHandler := &handlers.EtiquetaHandler{DB: database}
+	authHandler := &handlers.AuthHandler{DB: database}
+	reporteHandler := &handlers.ReporteHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -65,7 +93,7 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token", "X-Auth-Token"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: false,
 		MaxAge:           300,
@@ -79,69 +107,97 @@ func main() {
 
 	// API
 	r.Route("/api", func(r chi.Router) {
-		// Dispositivos
-		r.Get("/dispositivos", dispHandler.Listar)
-		r.Post("/dispositivos", dispHandler.Crear)
-		r.Get("/dispositivos/{id}", dispHandler.Obtener)
-		r.Put("/dispositivos/{id}", dispHandler.Actualizar)
-		r.Patch("/dispositivos/{id}", dispHandler.Actualizar)
-		r.Patch("/dispositivos/{id}/baja", dispHandler.DarDeBaja)
-		r.Delete("/dispositivos/{id}", dispHandler.Eliminar)
-		r.Get("/dispositivos/{id}/componentes", dispHandler.ListarComponentes)
+		// Públicos
+		r.Post("/auth/register", authHandler.Register)
+		r.Post("/auth/login", authHandler.Login)
 
-		// Movimientos / historial trazabilidad componentes
-		r.Get("/movimientos", movHandler.Listar)
-		r.Post("/movimientos", movHandler.Crear)
-		r.Get("/movimientos/{id}", movHandler.Obtener)
-		r.Delete("/movimientos/{id}", movHandler.Eliminar)
+		// Protegidos — requieren token
+		r.Group(func(r chi.Router) {
+			r.Use(authHandler.Middleware)
 
-		// Etiquetas / Escáner UUID (pre-generadas, imprimibles, asociadas)
-		r.Post("/etiquetas/generar", etiquetaHandler.Generar)
-		r.Get("/etiquetas", etiquetaHandler.Listar)
-		r.Get("/etiquetas/{id}", etiquetaHandler.Obtener)
-		r.Post("/etiquetas/{id}/asociar", etiquetaHandler.Asociar)
-		r.Post("/etiquetas/{id}/desasociar", etiquetaHandler.Desasociar)
-		r.Post("/etiquetas/{id}/impreso", etiquetaHandler.MarcarImpreso)
-		r.Post("/etiquetas/{id}/anular", etiquetaHandler.Anular)
-		r.Delete("/etiquetas/{id}", etiquetaHandler.Eliminar)
-		r.Get("/etiquetas/scan/{id}", etiquetaHandler.Escanear)
-		r.Get("/escaner/{id}", etiquetaHandler.Escanear) // alias corto
-		// Lookup dispositivo por etiqueta
-		r.Get("/dispositivos/etiqueta/{id}", func(w http.ResponseWriter, req *http.Request) {
-			etiquetaHandler.Escanear(w, req)
+			// Auth propias
+			r.Get("/auth/me", authHandler.Me)
+			r.Post("/auth/logout", authHandler.Logout)
+			r.Get("/usuarios", authHandler.ListarUsuarios)
+			r.Delete("/usuarios/{id}", authHandler.EliminarUsuario)
+
+			// Reportes — lector puede crear y cancelar propio
+			r.Get("/reportes", reporteHandler.Listar)
+			r.Get("/reportes/{id}", reporteHandler.Obtener)
+			r.Post("/reportes", reporteHandler.Crear)
+			r.Post("/reportes/{id}/cancelar", reporteHandler.Cancelar)
+			r.Post("/reportes/{id}/resolver", reporteHandler.Resolver)
+
+			// Dispositivos — GET para todos, escritura solo tecnico
+			r.Get("/dispositivos", dispHandler.Listar)
+			r.Get("/dispositivos/{id}", dispHandler.Obtener)
+			r.Get("/dispositivos/{id}/componentes", dispHandler.ListarComponentes)
+			r.Get("/dispositivos/etiqueta/{id}", func(w http.ResponseWriter, req *http.Request) {
+				etiquetaHandler.Escanear(w, req)
+			})
+			// tecnico only
+			r.Group(func(r chi.Router) {
+				r.Use(handlers.RequireRole("tecnico"))
+				r.Post("/dispositivos", dispHandler.Crear)
+				r.Put("/dispositivos/{id}", dispHandler.Actualizar)
+				r.Patch("/dispositivos/{id}", dispHandler.Actualizar)
+				r.Patch("/dispositivos/{id}/baja", dispHandler.DarDeBaja)
+				r.Delete("/dispositivos/{id}", dispHandler.Eliminar)
+
+				// Movimientos escritura
+				r.Post("/movimientos", movHandler.Crear)
+				r.Delete("/movimientos/{id}", movHandler.Eliminar)
+
+				// Etiquetas escritura
+				r.Post("/etiquetas/generar", etiquetaHandler.Generar)
+				r.Post("/etiquetas/{id}/asociar", etiquetaHandler.Asociar)
+				r.Post("/etiquetas/{id}/desasociar", etiquetaHandler.Desasociar)
+				r.Post("/etiquetas/{id}/impreso", etiquetaHandler.MarcarImpreso)
+				r.Post("/etiquetas/{id}/anular", etiquetaHandler.Anular)
+				r.Delete("/etiquetas/{id}", etiquetaHandler.Eliminar)
+
+				// Mantenimientos escritura
+				r.Post("/mantenimientos", mantHandler.Crear)
+				r.Handle("/mantenimiento", http.HandlerFunc(mantHandler.Crear))
+				r.Put("/mantenimientos/{id}", mantHandler.Actualizar)
+				r.Patch("/mantenimientos/{id}", mantHandler.Actualizar)
+				r.Delete("/mantenimientos/{id}", mantHandler.Eliminar)
+
+				// Tintas escritura
+				r.Put("/impresoras/{id}/tintas", tintaHandler.Actualizar)
+				r.Put("/dispositivos/{id}/tintas", tintaHandler.Actualizar)
+
+				// Evidencia escritura
+				r.Post("/evidencia/upload", evHandler.Upload)
+				r.Delete("/evidencia/{id}", evHandler.Eliminar)
+			})
+
+			// Lectura permitida a lector y tecnico
+			r.Get("/movimientos", movHandler.Listar)
+			r.Get("/movimientos/{id}", movHandler.Obtener)
+
+			r.Get("/etiquetas", etiquetaHandler.Listar)
+			r.Get("/etiquetas/{id}", etiquetaHandler.Obtener)
+			r.Get("/etiquetas/scan/{id}", etiquetaHandler.Escanear)
+			r.Get("/escaner/{id}", etiquetaHandler.Escanear)
+
+			r.Get("/mantenimientos", mantHandler.Listar)
+			r.Get("/mantenimientos/{id}", mantHandler.Obtener)
+
+			r.Get("/impresoras/{id}/tintas", tintaHandler.Obtener)
+			r.Get("/dispositivos/{id}/tintas", tintaHandler.Obtener)
+
+			r.Get("/evidencia/galeria", evHandler.Galeria)
+			r.Get("/galeria", evHandler.Galeria)
+			r.Get("/evidencia/{id}/raw", evHandler.ServirRaw)
+			r.Get("/evidencia/{id}", evHandler.ServirRaw)
 		})
-
-		// Mantenimientos
-		r.Get("/mantenimientos", mantHandler.Listar)
-		r.Post("/mantenimientos", mantHandler.Crear)
-		r.Handle("/mantenimiento", http.HandlerFunc(mantHandler.Crear)) // alias singular
-		r.Get("/mantenimientos/{id}", mantHandler.Obtener)
-		r.Put("/mantenimientos/{id}", mantHandler.Actualizar)
-		r.Patch("/mantenimientos/{id}", mantHandler.Actualizar)
-		r.Delete("/mantenimientos/{id}", mantHandler.Eliminar)
-
-		// Tintas - ambas rutas por compatibilidad
-		r.Get("/impresoras/{id}/tintas", tintaHandler.Obtener)
-		r.Put("/impresoras/{id}/tintas", tintaHandler.Actualizar)
-		r.Get("/dispositivos/{id}/tintas", tintaHandler.Obtener)
-		r.Put("/dispositivos/{id}/tintas", tintaHandler.Actualizar)
-
-		// Evidencia cifrada
-		r.Post("/evidencia/upload", evHandler.Upload)
-		r.Get("/evidencia/galeria", evHandler.Galeria)
-		r.Get("/galeria", evHandler.Galeria) // alias
-		r.Get("/evidencia/{id}/raw", evHandler.ServirRaw)
-		r.Delete("/evidencia/{id}", evHandler.Eliminar)
-
-		// Aliases adicionales para frontend Astro
-		r.Get("/evidencia/{id}", evHandler.ServirRaw)
 	})
 
-	// Servir PDFs (solo lectura, sin cifrado)
+	// Servir PDFs (solo lectura, sin cifrado) — requiere auth? público para PDF reportes, dejamos público
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("./uploads"))))
 
 	// --- Frontend estático servido por Go ---
-	// Busca dist en varias ubicaciones relativas (dev vs binary)
 	candidates := []string{
 		getEnv("FRONTEND_DIST", ""),
 		"../frontend/dist",
@@ -158,38 +214,30 @@ func main() {
 			frontendDist, _ = filepath.Abs(c)
 			break
 		}
-		// También probar ruta relativa al cwd
 		if st, err := os.Stat(filepath.Join(".", c)); err == nil && st.IsDir() {
 			frontendDist, _ = filepath.Abs(filepath.Join(".", c))
 			break
 		}
 	}
 	if frontendDist == "" {
-		// fallback por defecto
 		frontendDist, _ = filepath.Abs("../frontend/dist")
 	}
 	if st, err := os.Stat(frontendDist); err == nil && st.IsDir() {
 		log.Printf("✓ Frontend estático: %s", frontendDist)
-		// FileServer para assets
 		fileServer := http.FileServer(http.Dir(frontendDist))
-		// Handler SPA con fallback
 		r.Get("/*", func(w http.ResponseWriter, req *http.Request) {
-			// Evitar colisión con /api y /health ya definidos (chi las matchea antes)
 			path := req.URL.Path
-			// Intentar servir archivo exacto
 			fullPath := filepath.Join(frontendDist, filepath.FromSlash(path))
 			if info, err := os.Stat(fullPath); err == nil && !info.IsDir() {
 				fileServer.ServeHTTP(w, req)
 				return
 			}
-			// Si es directorio con index.html
 			if info, err := os.Stat(fullPath); err == nil && info.IsDir() {
 				if _, err := os.Stat(filepath.Join(fullPath, "index.html")); err == nil {
 					http.ServeFile(w, req, filepath.Join(fullPath, "index.html"))
 					return
 				}
 			}
-			// Fallback para rutas dinámicas /dispositivos/:id → servir placeholder pre-render
 			if strings.HasPrefix(path, "/dispositivos/") {
 				placeholder := filepath.Join(frontendDist, "dispositivos", "placeholder", "index.html")
 				if _, err := os.Stat(placeholder); err == nil {
@@ -197,7 +245,6 @@ func main() {
 					return
 				}
 			}
-			// Fallback general SPA → index.html
 			index := filepath.Join(frontendDist, "index.html")
 			if _, err := os.Stat(index); err == nil {
 				http.ServeFile(w, req, index)
@@ -207,7 +254,6 @@ func main() {
 		})
 	} else {
 		log.Printf("⚠ Frontend no encontrado en %s — ejecuta 'npm run build' en frontend/", frontendDist)
-		// Ruta informativa
 		r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
 			w.Write([]byte(`<h1>Frontend no compilado</h1><p>Ejecuta <code>npm run build</code> en <code>frontend/</code> y reinicia Go.</p><p><a href="/api/dispositivos">Probar API</a> | <a href="/health">health</a></p>`))
