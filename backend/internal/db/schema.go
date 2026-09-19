@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"log"
+	"strings"
 )
 
 const Schema = `
@@ -131,9 +132,9 @@ CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id);
 
 CREATE TABLE IF NOT EXISTS auditoria (
   id TEXT PRIMARY KEY,
-  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan')),
+  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma')),
   entidad_id TEXT NOT NULL,
-  accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar')),
+  accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar','cerrar','escanear')),
   campo TEXT,
   valor_anterior TEXT,
   valor_nuevo TEXT,
@@ -162,6 +163,30 @@ CREATE INDEX IF NOT EXISTS idx_planes_dispositivo ON planes_mantenimiento(dispos
 CREATE INDEX IF NOT EXISTS idx_planes_tipo ON planes_mantenimiento(tipo);
 CREATE INDEX IF NOT EXISTS idx_planes_proxima ON planes_mantenimiento(proxima_fecha);
 CREATE INDEX IF NOT EXISTS idx_planes_activo ON planes_mantenimiento(activo);
+
+CREATE TABLE IF NOT EXISTS tomas_fisicas (
+  id TEXT PRIMARY KEY,
+  sede TEXT NOT NULL,
+  descripcion TEXT,
+  estado TEXT NOT NULL CHECK (estado IN ('abierto','cerrado')) DEFAULT 'abierto',
+  creado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+  creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+  cerrado_en TEXT,
+  cerrado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS toma_items (
+  id TEXT PRIMARY KEY,
+  toma_id TEXT NOT NULL REFERENCES tomas_fisicas(id) ON DELETE CASCADE,
+  etiqueta_id TEXT REFERENCES etiquetas(id) ON DELETE SET NULL,
+  dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL,
+  escaneado_en TEXT NOT NULL DEFAULT (datetime('now')),
+  escaneado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+  UNIQUE(toma_id, etiqueta_id),
+  UNIQUE(toma_id, dispositivo_id)
+);
+CREATE INDEX IF NOT EXISTS idx_tomas_sede ON tomas_fisicas(sede);
+CREATE INDEX IF NOT EXISTS idx_tomas_estado ON tomas_fisicas(estado);
+CREATE INDEX IF NOT EXISTS idx_toma_items_toma ON toma_items(toma_id);
 `
 
 func InitDB(database *sql.DB) error {
@@ -273,11 +298,32 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_tipo ON planes_mantenimiento(tipo)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_proxima ON planes_mantenimiento(proxima_fecha)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_activo ON planes_mantenimiento(activo)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS tomas_fisicas (id TEXT PRIMARY KEY, sede TEXT NOT NULL, descripcion TEXT, estado TEXT NOT NULL CHECK (estado IN ('abierto','cerrado')) DEFAULT 'abierto', creado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL, creado_en TEXT NOT NULL DEFAULT (datetime('now')), cerrado_en TEXT, cerrado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS toma_items (id TEXT PRIMARY KEY, toma_id TEXT NOT NULL REFERENCES tomas_fisicas(id) ON DELETE CASCADE, etiqueta_id TEXT REFERENCES etiquetas(id) ON DELETE SET NULL, dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL, escaneado_en TEXT NOT NULL DEFAULT (datetime('now')), escaneado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL, UNIQUE(toma_id, etiqueta_id), UNIQUE(toma_id, dispositivo_id))`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_tomas_sede ON tomas_fisicas(sede)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_tomas_estado ON tomas_fisicas(estado)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_toma_items_toma ON toma_items(toma_id)`)
+	// Migración auditoria para incluir entidad 'toma' y accion 'cerrar'/'escanear' si tabla vieja existe
+	func() {
+		var sqlDef string
+		if err := database.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='auditoria'`).Scan(&sqlDef); err == nil && sqlDef != "" {
+			if !strings.Contains(sqlDef, "'toma'") || !strings.Contains(sqlDef, "'cerrar'") {
+				database.Exec(`CREATE TABLE IF NOT EXISTS auditoria_new (id TEXT PRIMARY KEY, entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma')), entidad_id TEXT NOT NULL, accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar','cerrar','escanear')), campo TEXT, valor_anterior TEXT, valor_nuevo TEXT, usuario_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL, username TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
+				database.Exec(`INSERT OR IGNORE INTO auditoria_new SELECT * FROM auditoria`)
+				database.Exec(`DROP TABLE auditoria`)
+				database.Exec(`ALTER TABLE auditoria_new RENAME TO auditoria`)
+				database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id)`)
+				database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha)`)
+				database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id)`)
+				database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad_fecha ON auditoria(entidad, fecha)`)
+			}
+		}
+	}()
 
 	// Asegurar foreign_keys activado por conexión
 	if _, err := database.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
 		log.Printf("WARN: no se pudo activar foreign_keys: %v", err)
 	}
-	log.Println("✓ Esquema SQLite inicializado (11 tablas, índices y FKs)")
+	log.Println("✓ Esquema SQLite inicializado (13 tablas, índices y FKs)")
 	return nil
 }

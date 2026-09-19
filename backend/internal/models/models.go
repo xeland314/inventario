@@ -244,3 +244,23 @@ type PlanMantenimiento struct {
 	ActualizadoEn *string `json:"actualizado_en"`
 	CreadoPor     *string `json:"creado_por"`
 }
+
+type TomaFisica struct {
+	ID          string  `json:"id"`
+	Sede        string  `json:"sede"`
+	Descripcion *string `json:"descripcion"`
+	Estado      string  `json:"estado"`
+	CreadoPor   *string `json:"creado_por"`
+	CreadoEn    string  `json:"creado_en"`
+	CerradoEn   *string `json:"cerrado_en"`
+	CerradoPor  *string `json:"cerrado_por"`
+}
+
+type TomaItem struct {
+	ID            string  `json:"id"`
+	TomaID        string  `json:"toma_id"`
+	EtiquetaID    *string `json:"etiqueta_id"`
+	DispositivoID *string `json:"dispositivo_id"`
+	EscaneadoEn   string  `json:"escaneado_en"`
+	EscaneadoPor  *string `json:"escaneado_por"`
+}
