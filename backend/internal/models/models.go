@@ -231,3 +231,16 @@ type Auditoria struct {
 	Username      *string `json:"username"`
 	Fecha         string  `json:"fecha"`
 }
+
+type PlanMantenimiento struct {
+	ID            string  `json:"id"`
+	DispositivoID *string `json:"dispositivo_id"`
+	Tipo          *string `json:"tipo"`
+	CadaDias      int     `json:"cada_dias"`
+	ProximaFecha  string  `json:"proxima_fecha"`
+	Descripcion   string  `json:"descripcion"`
+	Activo        int     `json:"activo"`
+	CreadoEn      string  `json:"creado_en"`
+	ActualizadoEn *string `json:"actualizado_en"`
+	CreadoPor     *string `json:"creado_por"`
+}

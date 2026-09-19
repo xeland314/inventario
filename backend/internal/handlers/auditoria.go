@@ -23,10 +23,13 @@ func RegistrarAuditoria(db *sql.DB, r *http.Request, entidad, entidadID, accion,
 	}
 	var usuarioID *string
 	var username *string
-	if u, ok := GetAuthUser(r); ok && u != nil {
-		usuarioID = &u.ID
-		username = &u.Username
-	} else {
+	if r != nil {
+		if u, ok := GetAuthUser(r); ok && u != nil {
+			usuarioID = &u.ID
+			username = &u.Username
+		}
+	}
+	if username == nil {
 		s := "sistema"
 		username = &s
 	}

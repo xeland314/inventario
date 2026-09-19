@@ -85,6 +85,7 @@ func main() {
 	authHandler := &handlers.AuthHandler{DB: database}
 	reporteHandler := &handlers.ReporteHandler{DB: database}
 	auditHandler := &handlers.AuditoriaHandler{DB: database}
+	planHandler := &handlers.PlanHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -197,12 +198,26 @@ func main() {
 			r.Get("/auditoria", auditHandler.Listar)
 			r.Get("/auditoria/{id}", auditHandler.Obtener)
 			r.Get("/dispositivos/{id}/historial", func(w http.ResponseWriter, req *http.Request) {
-				// alias: fuerza filtros entidad=dispositivo & entidad_id
 				q := req.URL.Query()
 				q.Set("entidad", "dispositivo")
 				q.Set("entidad_id", chi.URLParam(req, "id"))
 				req.URL.RawQuery = q.Encode()
 				auditHandler.Listar(w, req)
+			})
+
+			// Planes mantenimiento — lectura para todos (específicas antes de {id})
+			r.Get("/planes", planHandler.Listar)
+			r.Get("/planes/proximos", planHandler.Proximos)
+			r.Get("/planes/vencidos", planHandler.Vencidos)
+			r.Get("/planes/calendario.ics", planHandler.CalendarioICS)
+			r.Get("/planes/{id}", planHandler.Obtener)
+			// escritura solo tecnico (dentro ya hay grupo tecnico, pero explicitamos)
+			r.Group(func(r chi.Router) {
+				r.Use(handlers.RequireRole("tecnico"))
+				r.Post("/planes", planHandler.Crear)
+				r.Put("/planes/{id}", planHandler.Actualizar)
+				r.Patch("/planes/{id}", planHandler.Actualizar)
+				r.Delete("/planes/{id}", planHandler.Eliminar)
 			})
 		})
 	})

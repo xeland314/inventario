@@ -128,6 +128,9 @@ func (h *MantenimientoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al insertar mantenimiento: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "mantenimiento", id, "crear", "", "", "")
+	// Recalcular planes que aplican a este dispositivo/tipo (fecha_real + cada_dias)
+	RecalcularProxima(h.DB, r, dispositivoID, fechaHora)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "message": "Mantenimiento registrado", "url_pdf": urlPdf})

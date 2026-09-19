@@ -131,7 +131,7 @@ CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id);
 
 CREATE TABLE IF NOT EXISTS auditoria (
   id TEXT PRIMARY KEY,
-  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia')),
+  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan')),
   entidad_id TEXT NOT NULL,
   accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar')),
   campo TEXT,
@@ -145,6 +145,23 @@ CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_i
 CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);
 CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
 CREATE INDEX IF NOT EXISTS idx_auditoria_entidad_fecha ON auditoria(entidad, fecha);
+
+CREATE TABLE IF NOT EXISTS planes_mantenimiento (
+  id TEXT PRIMARY KEY,
+  dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE CASCADE,
+  tipo TEXT,
+  cada_dias INTEGER NOT NULL CHECK (cada_dias > 0 AND cada_dias <= 3650),
+  proxima_fecha TEXT NOT NULL,
+  descripcion TEXT NOT NULL,
+  activo INTEGER NOT NULL DEFAULT 1,
+  creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+  actualizado_en TEXT,
+  creado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_planes_dispositivo ON planes_mantenimiento(dispositivo_id);
+CREATE INDEX IF NOT EXISTS idx_planes_tipo ON planes_mantenimiento(tipo);
+CREATE INDEX IF NOT EXISTS idx_planes_proxima ON planes_mantenimiento(proxima_fecha);
+CREATE INDEX IF NOT EXISTS idx_planes_activo ON planes_mantenimiento(activo);
 `
 
 func InitDB(database *sql.DB) error {
@@ -251,11 +268,16 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad_fecha ON auditoria(entidad, fecha)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS planes_mantenimiento (id TEXT PRIMARY KEY, dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE CASCADE, tipo TEXT, cada_dias INTEGER NOT NULL CHECK (cada_dias > 0 AND cada_dias <= 3650), proxima_fecha TEXT NOT NULL, descripcion TEXT NOT NULL, activo INTEGER NOT NULL DEFAULT 1, creado_en TEXT NOT NULL DEFAULT (datetime('now')), actualizado_en TEXT, creado_por TEXT REFERENCES usuarios(id) ON DELETE SET NULL)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_dispositivo ON planes_mantenimiento(dispositivo_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_tipo ON planes_mantenimiento(tipo)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_proxima ON planes_mantenimiento(proxima_fecha)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_planes_activo ON planes_mantenimiento(activo)`)
 
 	// Asegurar foreign_keys activado por conexión
 	if _, err := database.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
 		log.Printf("WARN: no se pudo activar foreign_keys: %v", err)
 	}
-	log.Println("✓ Esquema SQLite inicializado (10 tablas, índices y FKs)")
+	log.Println("✓ Esquema SQLite inicializado (11 tablas, índices y FKs)")
 	return nil
 }
