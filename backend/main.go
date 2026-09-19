@@ -55,6 +55,7 @@ func main() {
 	tintaHandler := &handlers.TintaHandler{DB: database}
 	evHandler := &handlers.EvidenciaHandler{DB: database, MasterKey: []byte(encryptionKey), StorageFolder: storageFolder}
 	movHandler := &handlers.MovimientoHandler{DB: database}
+	etiquetaHandler := &handlers.EtiquetaHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -93,6 +94,22 @@ func main() {
 		r.Post("/movimientos", movHandler.Crear)
 		r.Get("/movimientos/{id}", movHandler.Obtener)
 		r.Delete("/movimientos/{id}", movHandler.Eliminar)
+
+		// Etiquetas / Escáner UUID (pre-generadas, imprimibles, asociadas)
+		r.Post("/etiquetas/generar", etiquetaHandler.Generar)
+		r.Get("/etiquetas", etiquetaHandler.Listar)
+		r.Get("/etiquetas/{id}", etiquetaHandler.Obtener)
+		r.Post("/etiquetas/{id}/asociar", etiquetaHandler.Asociar)
+		r.Post("/etiquetas/{id}/desasociar", etiquetaHandler.Desasociar)
+		r.Post("/etiquetas/{id}/impreso", etiquetaHandler.MarcarImpreso)
+		r.Post("/etiquetas/{id}/anular", etiquetaHandler.Anular)
+		r.Delete("/etiquetas/{id}", etiquetaHandler.Eliminar)
+		r.Get("/etiquetas/scan/{id}", etiquetaHandler.Escanear)
+		r.Get("/escaner/{id}", etiquetaHandler.Escanear) // alias corto
+		// Lookup dispositivo por etiqueta
+		r.Get("/dispositivos/etiqueta/{id}", func(w http.ResponseWriter, req *http.Request) {
+			etiquetaHandler.Escanear(w, req)
+		})
 
 		// Mantenimientos
 		r.Get("/mantenimientos", mantHandler.Listar)

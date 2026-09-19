@@ -42,6 +42,26 @@ func EsTipoMovimientoValido(t string) bool {
 	return TiposMovimientoValidos[t]
 }
 
+var EstadosEtiquetaValidos = map[string]bool{
+	"disponible": true,
+	"impreso":    true,
+	"asignado":   true,
+	"anulado":    true,
+}
+
+func EsEstadoEtiquetaValido(s string) bool { return EstadosEtiquetaValidos[s] }
+
+type Etiqueta struct {
+	ID            string  `json:"id"`
+	Version       int     `json:"version"`
+	Estado        string  `json:"estado"`
+	DispositivoID *string `json:"dispositivo_id"`
+	CodigoBarras  *string `json:"codigo_barras"`
+	GeneradoEn    string  `json:"generado_en"`
+	ImpresoEn     *string `json:"impreso_en"`
+	AsignadoEn    *string `json:"asignado_en"`
+}
+
 type Dispositivo struct {
 	ID               string  `json:"id"`
 	CodigoActivo     string  `json:"codigo_activo"`
@@ -65,6 +85,7 @@ type Dispositivo struct {
 	ActualizadoEn    *string `json:"actualizado_en"`
 	Tintas           []NivelTinta  `json:"tintas,omitempty"`
 	Componentes      []Dispositivo `json:"componentes,omitempty"`
+	Etiqueta         *Etiqueta     `json:"etiqueta,omitempty"`
 }
 
 type Movimiento struct {
