@@ -86,6 +86,7 @@ func main() {
 	reporteHandler := &handlers.ReporteHandler{DB: database}
 	auditHandler := &handlers.AuditoriaHandler{DB: database}
 	planHandler := &handlers.PlanHandler{DB: database}
+	dashHandler := &handlers.DashboardHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -211,6 +212,9 @@ func main() {
 			r.Get("/planes/vencidos", planHandler.Vencidos)
 			r.Get("/planes/calendario.ics", planHandler.CalendarioICS)
 			r.Get("/planes/{id}", planHandler.Obtener)
+			// Dashboard / Estadísticas
+			r.Get("/dashboard", dashHandler.Resumen)
+			r.Get("/estadisticas", dashHandler.Resumen)
 			// escritura solo tecnico (dentro ya hay grupo tecnico, pero explicitamos)
 			r.Group(func(r chi.Router) {
 				r.Use(handlers.RequireRole("tecnico"))
