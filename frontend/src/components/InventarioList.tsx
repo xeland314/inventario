@@ -26,10 +26,20 @@ export default function InventarioList(): React.JSX.Element {
     }
     return 'todos';
   });
+  const [busqueda, setBusqueda] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('q') || '';
+    }
+    return '';
+  });
 
-  const fetchData = (estado: string): void => {
+  const fetchData = (estado: string, q: string): void => {
     setLoading(true);
-    const url = estado && estado !== 'todos' ? `/api/dispositivos?estado=${estado}` : '/api/dispositivos';
+    const params = new URLSearchParams();
+    if (estado && estado !== 'todos') params.set('estado', estado);
+    if (q && q.trim()) params.set('q', q.trim());
+    const url = params.toString() ? `/api/dispositivos?${params.toString()}` : '/api/dispositivos';
     fetch(url)
       .then((r) => {
         if (!r.ok) throw new Error(`Backend ${r.status}`);
@@ -44,10 +54,13 @@ export default function InventarioList(): React.JSX.Element {
   };
 
   useEffect(() => {
-    fetchData(filtro);
-    const url = filtro === 'todos' ? '/' : `/?estado=${filtro}`;
+    fetchData(filtro, busqueda);
+    const params = new URLSearchParams();
+    if (filtro !== 'todos') params.set('estado', filtro);
+    if (busqueda) params.set('q', busqueda);
+    const url = params.toString() ? `/?${params.toString()}` : '/';
     window.history.replaceState({}, '', url);
-  }, [filtro]);
+  }, [filtro, busqueda]);
 
   const FiltroBtn: React.FC<{ value: string; label: string; activeClass: string }> = ({ value, label, activeClass }) => (
     <button
@@ -63,6 +76,24 @@ export default function InventarioList(): React.JSX.Element {
 
   return (
     <div className="space-y-6">
+      <div className="relative">
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar compu, disco, GGM-..., marca, ID o UUID..."
+          className="w-full border border-slate-200 rounded-xl px-4 py-3 min-h-[44px] text-sm focus:border-sky-500 focus:outline-none pr-10"
+        />
+        <span className="absolute right-3 top-3 text-slate-400 text-sm">⌕</span>
+        {busqueda && (
+          <button
+            type="button"
+            onClick={() => setBusqueda('')}
+            className="absolute right-10 top-3 text-slate-400 hover:text-slate-600 text-sm"
+          >
+            ✕
+          </button>
+        )}
+      </div>
       <div className="flex gap-2 border-b border-slate-200 pb-3 flex-wrap overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
         <FiltroBtn value="todos" label="Todos" activeClass="bg-slate-900 text-white" />
         <FiltroBtn value="activo" label="Activos" activeClass="bg-emerald-600 text-white" />
@@ -75,6 +106,11 @@ export default function InventarioList(): React.JSX.Element {
         <FiltroBtn value="dado_de_baja" label="Baja" activeClass="bg-rose-600 text-white" />
         <FiltroBtn value="extraviado" label="Extraviado" activeClass="bg-purple-600 text-white" />
       </div>
+      {busqueda && !loading && (
+        <p className="text-xs text-slate-500">
+          {dispositivos.length} resultado{dispositivos.length !== 1 ? 's' : ''} para “{busqueda}” {filtro !== 'todos' ? `· filtro ${filtro}` : ''} — también funciona con UUID/ID completo.
+        </p>
+      )}
 
       {error && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm">

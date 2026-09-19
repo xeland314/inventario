@@ -37,6 +37,14 @@ func (h *DispositivoHandler) Listar(w http.ResponseWriter, r *http.Request) {
 	tipoComp := r.URL.Query().Get("tipo_componente")
 	soloComponentes := r.URL.Query().Get("solo_componentes")
 	soloPadres := r.URL.Query().Get("solo_padres")
+	q := r.URL.Query().Get("q")
+	if q == "" {
+		q = r.URL.Query().Get("search")
+	}
+	// alias para búsqueda global usada por combobox
+	if q == "" {
+		q = r.URL.Query().Get("query")
+	}
 
 	query := `SELECT id, codigo_activo, numero_serie, tipo, marca, modelo, COALESCE(especificaciones,''), valor_compra, proveedor, estado, ubicacion, asignado_a, fecha_compra, fecha_baja, motivo_baja, parent_id, tipo_componente, sede, creado_en, actualizado_en FROM dispositivos WHERE 1=1`
 	args := []interface{}{}
@@ -78,7 +86,17 @@ func (h *DispositivoHandler) Listar(w http.ResponseWriter, r *http.Request) {
 	if soloPadres == "true" || soloPadres == "1" {
 		query += ` AND parent_id IS NULL`
 	}
+	if q != "" {
+		like := "%" + q + "%"
+		query += ` AND (codigo_activo LIKE ? OR numero_serie LIKE ? OR marca LIKE ? OR modelo LIKE ? OR tipo LIKE ? OR id LIKE ? OR COALESCE(especificaciones,'') LIKE ?)`
+		args = append(args, like, like, like, like, like, like, like)
+	}
 	query += ` ORDER BY creado_en DESC`
+	// límite opcional para combobox grande
+	if lim := r.URL.Query().Get("limit"); lim != "" {
+		query += ` LIMIT ?`
+		args = append(args, lim)
+	}
 
 	rows, err := h.DB.Query(query, args...)
 	if err != nil {

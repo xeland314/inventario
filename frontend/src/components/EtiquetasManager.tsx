@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Escaner from './Escaner';
+import DeviceSearchCombobox from './DeviceSearchCombobox';
 
 interface Etiqueta {
   id: string;
@@ -262,12 +263,12 @@ export default function EtiquetasManager(): React.JSX.Element {
         <h3 className="font-bold mb-3 text-sm sm:text-base">🔗 Asociar etiqueta a dispositivo</h3>
         <form onSubmit={handleAsociar} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input value={asociarId} onChange={(e) => setAsociarId(e.target.value)} placeholder="UUID etiqueta (escaneado)" className="border border-slate-200 rounded-xl px-3 py-3 min-h-[44px] text-sm font-mono focus:border-sky-500 focus:outline-none" />
-          <input value={dispositivoId} onChange={(e) => setDispositivoId(e.target.value)} placeholder="ID dispositivo" className="border border-slate-200 rounded-xl px-3 py-3 min-h-[44px] text-sm font-mono focus:border-sky-500 focus:outline-none" />
+          <DeviceSearchCombobox value={dispositivoId} onChange={(id) => setDispositivoId(id)} placeholder="Buscar compu, disco, GGM-... o pegar UUID" label="" />
           <button type="submit" className="bg-sky-600 text-white rounded-full px-5 py-3 min-h-[44px] text-sm hover:bg-sky-500 touch-manipulation">
             Asociar
           </button>
         </form>
-        <p className="text-xs text-slate-400 mt-2">Escanea arriba — se auto-rellena.</p>
+        <p className="text-xs text-slate-400 mt-2">Busca escribiendo “compu”, “disco”, “GGM-COM” o pega el UUID. También funciona con ID completo.</p>
       </div>
 
       {/* Vista pantalla */}
