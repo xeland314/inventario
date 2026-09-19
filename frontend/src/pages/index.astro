@@ -1,0 +1,20 @@
+---
+import Layout from '../layouts/Layout.astro';
+import InventarioList from '../components/InventarioList.jsx';
+---
+
+<Layout title="Inventario">
+  <main class="max-w-6xl mx-auto p-6 space-y-6">
+    <header class="flex flex-col sm:flex-row justify-between gap-4 items-start sm:items-center">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-900">Inventario de Tecnología</h1>
+        <p class="text-sm text-slate-500 mt-1">Gestión de activos, mantenimientos, bajas y tintas — servido por Go</p>
+      </div>
+      <a href="/dispositivos/nuevo" class="bg-sky-600 hover:bg-sky-500 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition">
+        + Alta de Dispositivo
+      </a>
+    </header>
+
+    <InventarioList client:load />
+  </main>
+</Layout>

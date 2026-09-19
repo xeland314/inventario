@@ -1,0 +1,8 @@
+inventario.db
+inventario.db-*
+*.enc
+encrypted_storage/
+uploads/
+inventario.exe
+inventario
+.env

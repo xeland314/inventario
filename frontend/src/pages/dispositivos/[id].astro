@@ -1,0 +1,25 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import DispositivoDetail from '../../components/DispositivoDetail.jsx';
+
+// Para build estático servido por Go: pre-renderizamos un placeholder
+// y Go hace fallback a este HTML para cualquier /dispositivos/:id
+export async function getStaticPaths() {
+  return [{ params: { id: 'placeholder' } }];
+}
+const { id } = Astro.params;
+---
+
+<Layout title="Dispositivo">
+  <main class="max-w-6xl mx-auto p-6">
+    <DispositivoDetail client:load id={id} />
+  </main>
+</Layout>
+
+<script is:inline>
+  // Si el id es placeholder pero la URL real es otra, reemplazar el componente
+  // DispositivoDetail leerá el id real desde window.location en el fallback de Go
+  if (window.location.pathname.includes('/dispositivos/') && document.documentElement) {
+    // No-op: el componente ya maneja fallback leyendo la URL real
+  }
+</script>
