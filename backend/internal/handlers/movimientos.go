@@ -159,6 +159,15 @@ func (h *MovimientoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "movimiento", id, "crear", "", "", "")
+	// también auditar traslado a nivel dispositivo
+	if req.DestinoParentID != nil && *req.DestinoParentID != "" {
+		anterior := ""
+		if currentParent != nil {
+			anterior = *currentParent
+		}
+		RegistrarAuditoria(h.DB, r, "dispositivo", req.DispositivoID, "traslado", "parent_id", anterior, *req.DestinoParentID)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "message": "Movimiento registrado"})

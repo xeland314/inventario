@@ -128,6 +128,23 @@ CREATE INDEX IF NOT EXISTS idx_sesiones_user ON sesiones(user_id);
 CREATE INDEX IF NOT EXISTS idx_reportes_dispositivo ON reportes(dispositivo_id);
 CREATE INDEX IF NOT EXISTS idx_reportes_creador ON reportes(creado_por);
 CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id);
+
+CREATE TABLE IF NOT EXISTS auditoria (
+  id TEXT PRIMARY KEY,
+  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia')),
+  entidad_id TEXT NOT NULL,
+  accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar')),
+  campo TEXT,
+  valor_anterior TEXT,
+  valor_nuevo TEXT,
+  usuario_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL,
+  username TEXT,
+  fecha TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha);
+CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_auditoria_entidad_fecha ON auditoria(entidad, fecha);
 `
 
 func InitDB(database *sql.DB) error {
@@ -229,11 +246,16 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_reportes_creador ON reportes(creado_por)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(username)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS auditoria (id TEXT PRIMARY KEY, entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia')), entidad_id TEXT NOT NULL, accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar')), campo TEXT, valor_anterior TEXT, valor_nuevo TEXT, usuario_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL, username TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_fecha ON auditoria(fecha)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_usuario ON auditoria(usuario_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad_fecha ON auditoria(entidad, fecha)`)
 
 	// Asegurar foreign_keys activado por conexión
 	if _, err := database.Exec(`PRAGMA foreign_keys = ON;`); err != nil {
 		log.Printf("WARN: no se pudo activar foreign_keys: %v", err)
 	}
-	log.Println("✓ Esquema SQLite inicializado (9 tablas, índices y FKs)")
+	log.Println("✓ Esquema SQLite inicializado (10 tablas, índices y FKs)")
 	return nil
 }

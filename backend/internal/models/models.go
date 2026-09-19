@@ -218,3 +218,16 @@ type Reporte struct {
 	CanceladoEn   *string `json:"cancelado_en"`
 	Username      *string `json:"username,omitempty"`
 }
+
+type Auditoria struct {
+	ID            string  `json:"id"`
+	Entidad       string  `json:"entidad"`
+	EntidadID     string  `json:"entidad_id"`
+	Accion        string  `json:"accion"`
+	Campo         *string `json:"campo"`
+	ValorAnterior *string `json:"valor_anterior"`
+	ValorNuevo    *string `json:"valor_nuevo"`
+	UsuarioID     *string `json:"usuario_id"`
+	Username      *string `json:"username"`
+	Fecha         string  `json:"fecha"`
+}

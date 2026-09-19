@@ -114,6 +114,9 @@ func (h *EtiquetaHandler) Generar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	for _, eid := range ids {
+		RegistrarAuditoria(h.DB, r, "etiqueta", eid, "generar", "", "", "")
+	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"generadas": len(ids), "version": req.Version, "ids": ids})
@@ -245,6 +248,7 @@ func (h *EtiquetaHandler) Asociar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al asociar: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "etiqueta", id, "asociar", "dispositivo_id", "", req.DispositivoID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta asociada", "etiqueta_id": id, "dispositivo_id": req.DispositivoID})
 }
@@ -268,6 +272,7 @@ func (h *EtiquetaHandler) Desasociar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "etiqueta", id, "desasociar", "", "", "")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta desasociada"})
 }
@@ -285,6 +290,7 @@ func (h *EtiquetaHandler) MarcarImpreso(w http.ResponseWriter, r *http.Request) 
 	}
 	now := time.Now().Format(time.RFC3339)
 	h.DB.Exec(`UPDATE etiquetas SET estado = 'impreso', impreso_en = ? WHERE id = ?`, now, id)
+	RegistrarAuditoria(h.DB, r, "etiqueta", id, "impreso", "estado", "disponible", "impreso")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta marcada como impresa"})
 }
@@ -307,6 +313,7 @@ func (h *EtiquetaHandler) Anular(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Etiqueta asignada no se puede anular; desasocie primero", http.StatusBadRequest)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "etiqueta", id, "anulado", "estado", "", "anulado")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta anulada"})
 }

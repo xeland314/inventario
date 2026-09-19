@@ -84,6 +84,7 @@ func main() {
 	etiquetaHandler := &handlers.EtiquetaHandler{DB: database}
 	authHandler := &handlers.AuthHandler{DB: database}
 	reporteHandler := &handlers.ReporteHandler{DB: database}
+	auditHandler := &handlers.AuditoriaHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -191,6 +192,18 @@ func main() {
 			r.Get("/galeria", evHandler.Galeria)
 			r.Get("/evidencia/{id}/raw", evHandler.ServirRaw)
 			r.Get("/evidencia/{id}", evHandler.ServirRaw)
+
+			// Auditoria — lectura para lector y tecnico
+			r.Get("/auditoria", auditHandler.Listar)
+			r.Get("/auditoria/{id}", auditHandler.Obtener)
+			r.Get("/dispositivos/{id}/historial", func(w http.ResponseWriter, req *http.Request) {
+				// alias: fuerza filtros entidad=dispositivo & entidad_id
+				q := req.URL.Query()
+				q.Set("entidad", "dispositivo")
+				q.Set("entidad_id", chi.URLParam(req, "id"))
+				req.URL.RawQuery = q.Encode()
+				auditHandler.Listar(w, req)
+			})
 		})
 	})
 

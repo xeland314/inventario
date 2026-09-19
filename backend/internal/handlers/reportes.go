@@ -91,6 +91,7 @@ func (h *ReporteHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "reporte", id, "reportar", "descripcion", "", req.Descripcion)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]interface{}{"id": id, "message": "reporte creado"})
@@ -194,6 +195,7 @@ func (h *ReporteHandler) Cancelar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "reporte", id, "cancelar", "estado", "abierto", "cancelado")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "reporte cancelado"})
 }
@@ -224,6 +226,7 @@ func (h *ReporteHandler) Resolver(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "reporte", id, "resolver", "estado", "abierto", "resuelto")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "reporte resuelto"})
 }

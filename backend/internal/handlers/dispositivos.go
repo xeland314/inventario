@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -300,6 +301,7 @@ func (h *DispositivoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error al insertar: "+err.Error(), http.StatusConflict)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "dispositivo", id, "crear", "", "", "")
 	// Registrar movimiento inicial si tiene parent
 	if req.ParentID != nil {
 		movID := uuid.New().String()
@@ -342,6 +344,10 @@ func (h *DispositivoHandler) DarDeBaja(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Dispositivo no encontrado", http.StatusNotFound)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "dispositivo", id, "baja", "estado", "", "dado_de_baja")
+	if req.MotivoBaja != "" {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "baja", "motivo_baja", "", req.MotivoBaja)
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Equipo dado de baja correctamente", "fecha_baja": fechaBaja})
 }
@@ -358,6 +364,7 @@ func (h *DispositivoHandler) Eliminar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Dispositivo no encontrado", http.StatusNotFound)
 		return
 	}
+	RegistrarAuditoria(h.DB, r, "dispositivo", id, "eliminar", "", "", "")
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Dispositivo eliminado"})
 }
@@ -543,6 +550,81 @@ func (h *DispositivoHandler) Actualizar(w http.ResponseWriter, r *http.Request) 
 	if _, err := h.DB.Exec(query, args...); err != nil {
 		http.Error(w, "Error al actualizar: "+err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Auditoría por campo cambiado
+	if req.CodigoActivo != nil && *req.CodigoActivo != current.CodigoActivo {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "codigo_activo", current.CodigoActivo, *req.CodigoActivo)
+	}
+	if req.NumeroSerie != nil && *req.NumeroSerie != current.NumeroSerie {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "numero_serie", current.NumeroSerie, *req.NumeroSerie)
+	}
+	if req.Tipo != nil && *req.Tipo != current.Tipo {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "tipo", current.Tipo, *req.Tipo)
+	}
+	if req.Marca != nil && *req.Marca != current.Marca {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "marca", current.Marca, *req.Marca)
+	}
+	if req.Modelo != nil && *req.Modelo != current.Modelo {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "modelo", current.Modelo, *req.Modelo)
+	}
+	if req.Especificaciones != nil && *req.Especificaciones != current.Especificaciones {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "especificaciones", current.Especificaciones, *req.Especificaciones)
+	}
+	if req.ValorCompra != nil && fmt.Sprintf("%v", *req.ValorCompra) != fmt.Sprintf("%v", current.ValorCompra) {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "valor_compra", fmt.Sprintf("%v", current.ValorCompra), fmt.Sprintf("%v", *req.ValorCompra))
+	}
+	if req.Proveedor != nil && *req.Proveedor != current.Proveedor {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "proveedor", current.Proveedor, *req.Proveedor)
+	}
+	if req.Estado != nil && *req.Estado != current.Estado {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "estado", current.Estado, *req.Estado)
+	}
+	if req.Ubicacion != nil && *req.Ubicacion != current.Ubicacion {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "ubicacion", current.Ubicacion, *req.Ubicacion)
+	}
+	if req.AsignadoA != nil {
+		anterior := ""
+		if current.AsignadoA != nil {
+			anterior = *current.AsignadoA
+		}
+		if *req.AsignadoA != anterior {
+			RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "asignado_a", anterior, *req.AsignadoA)
+		}
+	}
+	if req.FechaCompra != nil && *req.FechaCompra != current.FechaCompra {
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "fecha_compra", current.FechaCompra, *req.FechaCompra)
+	}
+	if req.TipoComponente != nil {
+		anterior := ""
+		if current.TipoComponente != nil {
+			anterior = *current.TipoComponente
+		}
+		nuevo := *req.TipoComponente
+		if nuevo != anterior {
+			RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "tipo_componente", anterior, nuevo)
+		}
+	}
+	if req.Sede != nil {
+		anterior := ""
+		if current.Sede != nil {
+			anterior = *current.Sede
+		}
+		nuevo := *req.Sede
+		if nuevo != anterior {
+			RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "sede", anterior, nuevo)
+		}
+	}
+	if parentChange {
+		anterior := ""
+		if origenParent != nil {
+			anterior = *origenParent
+		}
+		nuevo := ""
+		if nuevoParent != nil {
+			nuevo = *nuevoParent
+		}
+		RegistrarAuditoria(h.DB, r, "dispositivo", id, "actualizar", "parent_id", anterior, nuevo)
 	}
 
 	// Registrar movimiento si hubo cambio de parent
