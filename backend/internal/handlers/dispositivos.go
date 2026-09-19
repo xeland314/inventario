@@ -89,8 +89,8 @@ func (h *DispositivoHandler) Listar(w http.ResponseWriter, r *http.Request) {
 	}
 	if q != "" {
 		like := "%" + q + "%"
-		query += ` AND (codigo_activo LIKE ? OR numero_serie LIKE ? OR marca LIKE ? OR modelo LIKE ? OR tipo LIKE ? OR id LIKE ? OR COALESCE(especificaciones,'') LIKE ?)`
-		args = append(args, like, like, like, like, like, like, like)
+		query += ` AND (codigo_activo LIKE ? OR numero_serie LIKE ? OR marca LIKE ? OR modelo LIKE ? OR tipo LIKE ? OR id LIKE ? OR COALESCE(especificaciones,'') LIKE ? OR EXISTS (SELECT 1 FROM etiquetas e WHERE e.dispositivo_id = dispositivos.id AND (e.id LIKE ? OR e.codigo_barras LIKE ?)))`
+		args = append(args, like, like, like, like, like, like, like, like, like)
 	}
 	query += ` ORDER BY creado_en DESC`
 	// límite opcional para combobox grande

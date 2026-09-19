@@ -19,6 +19,7 @@ export default function InventarioList(): React.JSX.Element {
   const [dispositivos, setDispositivos] = useState<Dispositivo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [etiquetaDevice, setEtiquetaDevice] = useState<Record<string, unknown> | null>(null);
   const [filtro, setFiltro] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -36,6 +37,7 @@ export default function InventarioList(): React.JSX.Element {
 
   const fetchData = (estado: string, q: string): void => {
     setLoading(true);
+    setEtiquetaDevice(null);
     const params = new URLSearchParams();
     if (estado && estado !== 'todos') params.set('estado', estado);
     if (q && q.trim()) params.set('q', q.trim());
@@ -48,6 +50,22 @@ export default function InventarioList(): React.JSX.Element {
       .then((data) => {
         setDispositivos(data.dispositivos || []);
         setError(null);
+        // Si no hay dispositivos y q parece UUID/ET, intenta resolver via etiqueta
+        const trimmed = (q || '').trim();
+        const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(trimmed);
+        const isEt = /^ET-[A-F0-9]{8}$/i.test(trimmed);
+        if ((data.dispositivos || []).length === 0 && (isUuid || isEt)) {
+          fetch(`/api/etiquetas/scan/${encodeURIComponent(trimmed)}`)
+            .then((r2) => (r2.ok ? r2.json() : null))
+            .then((scan: Record<string, unknown> | null) => {
+              if (scan && (scan as { dispositivo?: unknown }).dispositivo) {
+                setEtiquetaDevice(scan as Record<string, unknown>);
+              } else if (scan && (scan as { etiqueta?: unknown }).etiqueta) {
+                setEtiquetaDevice(scan as Record<string, unknown>);
+              }
+            })
+            .catch(() => {});
+        }
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -110,6 +128,27 @@ export default function InventarioList(): React.JSX.Element {
         <p className="text-xs text-slate-500">
           {dispositivos.length} resultado{dispositivos.length !== 1 ? 's' : ''} para “{busqueda}” {filtro !== 'todos' ? `· filtro ${filtro}` : ''} — también funciona con UUID/ID completo.
         </p>
+      )}
+
+      {etiquetaDevice && (
+        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4">
+          {(etiquetaDevice as { dispositivo?: { id: string; codigo_activo: string; marca: string; modelo: string } }).dispositivo ? (
+            <div>
+              <p className="text-xs font-bold text-sky-800">🔗 Etiqueta encontrada — dispositivo asociado</p>
+              <a href={`/dispositivos/${(etiquetaDevice as { dispositivo: { id: string } }).dispositivo.id}`} className="block mt-2 bg-white border border-sky-200 rounded-xl p-3 hover:bg-sky-50">
+                <span className="font-bold text-slate-900">{(etiquetaDevice as { dispositivo: { marca: string; modelo: string } }).dispositivo.marca} {(etiquetaDevice as { dispositivo: { modelo: string } }).dispositivo.modelo}</span>
+                <span className="text-xs font-mono text-slate-500 block">{(etiquetaDevice as { dispositivo: { codigo_activo: string; id: string } }).dispositivo.codigo_activo} · {(etiquetaDevice as { dispositivo: { id: string } }).dispositivo.id}</span>
+                <span className="text-sky-600 text-xs underline mt-1 inline-block">Ver ficha →</span>
+              </a>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-bold text-amber-800">🏷️ Etiqueta encontrada pero sin asignar</p>
+              <p className="font-mono text-xs text-slate-600 break-all mt-1">{(etiquetaDevice as { etiqueta?: { id: string; codigo_barras: string } }).etiqueta?.id || busqueda} {(etiquetaDevice as { etiqueta?: { codigo_barras: string } }).etiqueta?.codigo_barras ? `· ${(etiquetaDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras}` : ''}</p>
+              <a href="/etiquetas" className="text-sky-600 text-xs underline mt-2 inline-block">Asociar en Etiquetas →</a>
+            </div>
+          )}
+        </div>
       )}
 
       {error && (

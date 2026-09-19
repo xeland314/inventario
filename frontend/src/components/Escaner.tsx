@@ -10,6 +10,7 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
   const [error, setError] = useState<string | null>(null);
   const [manual, setManual] = useState<string>('');
   const [lastResult, setLastResult] = useState<string | null>(null);
+  const [scannedDevice, setScannedDevice] = useState<Record<string, unknown> | null>(null);
   const html5Ref = useRef<unknown>(null);
 
   const startScan = async (): Promise<void> => {
@@ -59,22 +60,27 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
     const id = texto.trim().replace(/^.*\/([A-F0-9\-]+)$/i, '$1').replace(/^.*\/e\//, '').split('?')[0];
     const uuid = id.includes('-') ? id : texto.trim();
     setLastResult(uuid);
+    setScannedDevice(null);
     if (navigator.vibrate) navigator.vibrate(120);
     await stopScan();
     if (onScan) onScan(uuid);
-    if (onDeviceFound) {
-      try {
-        const res = await fetch(`/api/etiquetas/scan/${encodeURIComponent(uuid)}`);
-        if (res.ok) {
-          const data = (await res.json()) as Record<string, unknown>;
-          onDeviceFound(data);
-        } else {
-          onDeviceFound({ etiqueta: null, error: await res.text() });
-        }
-      } catch (e) {
-        const err = e as Error;
-        onDeviceFound({ error: err.message });
+    try {
+      const res = await fetch(`/api/etiquetas/scan/${encodeURIComponent(uuid)}`);
+      if (res.ok) {
+        const data = (await res.json()) as Record<string, unknown>;
+        setScannedDevice(data);
+        if (onDeviceFound) onDeviceFound(data);
+      } else {
+        const errTxt = await res.text();
+        const data = { etiqueta: null, error: errTxt } as Record<string, unknown>;
+        setScannedDevice(data);
+        if (onDeviceFound) onDeviceFound(data);
       }
+    } catch (e) {
+      const err = e as Error;
+      const data = { error: err.message } as Record<string, unknown>;
+      setScannedDevice(data);
+      if (onDeviceFound) onDeviceFound(data);
     }
   };
 
@@ -124,6 +130,27 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
           <button type="button" onClick={() => navigator.clipboard.writeText(lastResult)} className="ml-2 underline text-sky-700">
             Copiar
           </button>
+        </div>
+      )}
+
+      {scannedDevice && (
+        <div className="rounded-xl border p-4 text-sm bg-slate-50 border-slate-200">
+          {(scannedDevice as { dispositivo?: { id: string; codigo_activo: string; marca: string; modelo: string; estado: string } }).dispositivo ? (
+            <div>
+              <p className="font-bold text-emerald-700">✓ Dispositivo asociado</p>
+              <p className="font-semibold mt-1">{(scannedDevice as { dispositivo: { marca: string; modelo: string } }).dispositivo.marca} {(scannedDevice as { dispositivo: { modelo: string } }).dispositivo.modelo}</p>
+              <p className="font-mono text-xs text-slate-500">{(scannedDevice as { dispositivo: { codigo_activo: string; id: string; estado: string } }).dispositivo.codigo_activo} · {(scannedDevice as { dispositivo: { id: string } }).dispositivo.id} · {(scannedDevice as { dispositivo: { estado: string } }).dispositivo.estado}</p>
+              <a href={`/dispositivos/${(scannedDevice as { dispositivo: { id: string } }).dispositivo.id}`} className="inline-block mt-2 bg-sky-600 text-white px-4 py-2 rounded-full text-xs">Ver ficha →</a>
+            </div>
+          ) : (scannedDevice as { etiqueta?: { id: string; codigo_barras: string; estado: string } }).etiqueta ? (
+            <div>
+              <p className="font-bold text-amber-700">🏷️ Etiqueta sin asignar</p>
+              <p className="font-mono text-xs break-all mt-1">{(scannedDevice as { etiqueta: { id: string } }).etiqueta.id} {(scannedDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras ? `· ${(scannedDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras}` : ''} · {(scannedDevice as { etiqueta: { estado: string } }).etiqueta.estado}</p>
+              <a href="/etiquetas" className="text-sky-600 underline text-xs mt-2 inline-block">Asociar en Etiquetas →</a>
+            </div>
+          ) : (
+            <p className="text-amber-700 text-xs">⚠️ {(scannedDevice as { error?: string }).error || 'Etiqueta no encontrada'}</p>
+          )}
         </div>
       )}
 
