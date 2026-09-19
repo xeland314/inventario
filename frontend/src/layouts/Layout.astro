@@ -9,21 +9,48 @@ const { title } = Astro.props;
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
     <title>{title} — Inventario TI</title>
     <meta name="description" content="Sistema de Inventario de Tecnología, Mantenimiento y Galería Cifrada" />
+    <meta name="theme-color" content="#0f172a" />
   </head>
   <body class="bg-slate-50 text-slate-900 font-sans antialiased">
-    <nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-50">
-      <a href="/" class="font-bold text-lg tracking-tight">🖥️ Inventario <span class="text-sky-400">TI</span></a>
-      <div class="flex gap-6 text-sm items-center">
+    <nav class="bg-slate-900 text-white px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center sticky top-0 z-50">
+      <a href="/" class="font-bold text-base sm:text-lg tracking-tight">🖥️ Inventario <span class="text-sky-400">TI</span></a>
+      <!-- Desktop nav -->
+      <div class="hidden md:flex gap-6 text-sm items-center">
         <a href="/" class="hover:text-sky-400 transition">Activos</a>
         <a href="/etiquetas" class="hover:text-sky-400 transition">🏷️ Etiquetas</a>
         <a href="/escaner" class="hover:text-sky-400 transition">🔍 Escanear</a>
         <a href="/?estado=dado_de_baja" class="hover:text-rose-400 transition">Bajas</a>
         <a href="/dispositivos/nuevo" class="bg-sky-600 hover:bg-sky-500 px-4 py-1.5 rounded-full text-white font-medium transition">+ Nuevo</a>
       </div>
+      <!-- Mobile hamburger -->
+      <div class="md:hidden flex items-center gap-2">
+        <a href="/dispositivos/nuevo" class="bg-sky-600 px-3 py-2 rounded-full text-white text-xs font-bold">+ Nuevo</a>
+        <button id="mobile-menu-btn" aria-label="Menú" class="p-2 rounded-lg border border-slate-700 hover:bg-slate-800">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+      </div>
     </nav>
+    <!-- Mobile menu panel -->
+    <div id="mobile-menu" class="hidden md:hidden bg-slate-900 text-white border-t border-slate-800 sticky top-[57px] z-40">
+      <div class="flex flex-col p-4 gap-3 text-sm">
+        <a href="/" class="py-2.5 px-3 rounded-lg hover:bg-slate-800">Activos</a>
+        <a href="/etiquetas" class="py-2.5 px-3 rounded-lg hover:bg-slate-800">🏷️ Etiquetas</a>
+        <a href="/escaner" class="py-2.5 px-3 rounded-lg hover:bg-slate-800">🔍 Escanear</a>
+        <a href="/?estado=dado_de_baja" class="py-2.5 px-3 rounded-lg hover:bg-slate-800">Bajas</a>
+      </div>
+    </div>
+    <script is:inline>
+      const btn = document.getElementById('mobile-menu-btn');
+      const menu = document.getElementById('mobile-menu');
+      if (btn && menu) {
+        btn.addEventListener('click', () => menu.classList.toggle('hidden'));
+        // cerrar al navegar
+        menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => menu.classList.add('hidden')));
+      }
+    </script>
     <slot />
     <footer class="text-center text-xs text-slate-400 py-8 mt-12 border-t border-slate-200">
       Sistema de Inventario TI — Golang + Astro + AES-256-GCM — {new Date().getFullYear()}

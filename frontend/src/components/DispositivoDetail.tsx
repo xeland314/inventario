@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import EncryptedGallery from './EncryptedGallery.jsx';
-import InkLevelGauge from './InkLevelGauge.jsx';
+import EncryptedGallery from './EncryptedGallery';
+import InkLevelGauge from './InkLevelGauge';
 
 export default function DispositivoDetail({ id: propId }) {
   const getRealId = () => {
