@@ -106,9 +106,10 @@ export default function EtiquetasManager(): React.JSX.Element {
       const margin = 28.35; // 1cm
       const cols = 4;
       const rows = 7; // 28 etiquetas por hoja (4x7), ~39mm alto c/u
-      const cardW = (pageW - margin * 2) / cols;
-      const cardH = (pageH - margin * 2) / rows;
-      const qrSize = Math.min(cardW * 0.62, cardH * 0.55); // ~29mm, legible
+      const cardW = (pageW - margin * 2) / cols; // ~134.6pt (~47.5mm)
+      const cardH = (pageH - margin * 2) / rows; // ~112.2pt (~39.6mm)
+      // Al límite: QR ~88pt (~31mm) aprovechando sobrante al máximo, misma 4x7
+      const qrSize = Math.min(cardW - 8, cardH - 24); // ~88pt ~31mm límite
       const qrMarginInCard = 4;
 
       let page = pdf.addPage([pageW, pageH]);
@@ -145,24 +146,22 @@ export default function EtiquetasManager(): React.JSX.Element {
         const qrBytes = Uint8Array.from(atob(qrDataUrl.split(',')[1]), (c) => c.charCodeAt(0));
         const qrImage = await pdf.embedPng(qrBytes);
         const qrX = x + (cardW - qrSize) / 2;
-        const qrY = y + cardH - qrSize - 8;
+        const qrY = y + cardH - qrSize - 6; // tope 6pt, deja 16pt abajo para texto
         page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
 
-        // Texto solo ET y UUID (no estado/version), centrado, negro
+        // Texto solo ET y UUID, centrado, negro
         const etText = et.codigo_barras;
         const uuidText = et.id;
         const etWidth = fontBold.widthOfTextAtSize(etText, 7);
         page.drawText(etText, {
           x: x + (cardW - etWidth) / 2,
-          y: qrY - 10,
+          y: qrY - 8,
           size: 7,
           font: fontBold,
           color: rgb(0, 0, 0),
         });
-        // UUID en dos líneas si hace falta, mono 5pt
         const uuidFontSize = 5;
         const uuidW = font.widthOfTextAtSize(uuidText, uuidFontSize);
-        // Si excede ancho, reducir levemente
         let fs = uuidFontSize;
         let w = uuidW;
         while (w > cardW - 6 && fs > 4) {
@@ -171,7 +170,7 @@ export default function EtiquetasManager(): React.JSX.Element {
         }
         page.drawText(uuidText, {
           x: x + (cardW - w) / 2,
-          y: qrY - 19,
+          y: qrY - 16,
           size: fs,
           font,
           color: rgb(0, 0, 0),
@@ -231,7 +230,7 @@ export default function EtiquetasManager(): React.JSX.Element {
             </button>
           </div>
         </form>
-        <p className="text-[11px] text-slate-400 mt-2">PDF: A4, margen 1cm, 4×7 cards cuadradas sin espacios (28 por hoja), borde negro 0.5pt, QR solo negro. Tamaño QR ~21mm (legible desde 10cm); mínimo técnico ~15mm con corrección M, recomendado 20-25mm.</p>
+        <p className="text-[11px] text-slate-400 mt-2">PDF: A4 1cm, 4×7 (28/hoja) borde 0.5pt, QR ~31mm al límite (antes 22mm). Mín 15mm M, rec. 20-25mm.</p>
       </div>
 
       <div className="flex gap-2 flex-wrap overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 print:hidden">
