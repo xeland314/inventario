@@ -337,6 +337,14 @@ export default function DispositivoDetail({ id: propId }) {
                 <option>Telefono IP</option>
                 <option>Camara IP</option>
                 <option>Disco Externo</option>
+                <option>Mouse</option>
+                <option>Teclado</option>
+                <option>Parlante</option>
+                <option>Microfono</option>
+                <option>Camara</option>
+                <option>Pantalla</option>
+                <option>Audifono</option>
+                <option>Auricular</option>
                 <option>Cargador</option>
                 <option>Otro</option>
               </select>

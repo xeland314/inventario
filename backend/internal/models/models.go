@@ -24,7 +24,7 @@ var TiposValidos = map[string]bool{
 	"Pantalla": true, "Cargador": true, "Disco": true,
 	"Cable Poder": true, "Cable HDMI": true, "Cable VGA": true, "Cable DisplayPort": true,
 	"Cable Ethernet": true, "Cable USB": true, "Cable SATA": true, "Patch Cord": true, "Adaptador": true,
-	"Bateria UPS": true, "Fusible": true, "Tarjeta Red": true, "Mouse": true, "Parlante": true, "Microfono": true, "Camara": true, "Disipador": true,
+	"Bateria UPS": true, "Fusible": true, "Tarjeta Red": true, "Mouse": true, "Mouses": true, "Teclados": true, "Parlantes": true, "Parlante": true, "Microfono": true, "Microfonos": true, "Camara": true, "Camaras": true, "Audifono": true, "Audifonos": true, "Auricular": true, "Auriculares": true, "Disipador": true,
 }
 
 var TiposComponenteValidos = map[string]bool{
@@ -40,7 +40,7 @@ var TiposComponenteValidos = map[string]bool{
 	// Energia / regulacion
 	"Regulador": true, "UPS": true, "Bateria UPS": true, "Fusible": true,
 	// Red / perifericos
-	"Tarjeta Red": true, "Mouse": true, "Parlante": true, "Microfono": true, "Camara": true, "Disipador": true,
+	"Tarjeta Red": true, "Mouse": true, "Mouses": true, "Parlante": true, "Parlantes": true, "Microfono": true, "Microfonos": true, "Camara": true, "Camaras": true, "Audifono": true, "Audifonos": true, "Auricular": true, "Auriculares": true, "Disipador": true,
 	"Otro": true,
 }
 
