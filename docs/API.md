@@ -3,8 +3,8 @@
 Base `http://localhost:8080/api` (mismo origen frontend). Salud `GET /health`.
 
 ## Dispositivos
-- `GET /api/dispositivos?estado=&tipo=&ubicacion=&sede=&parent_id=&tipo_componente=&solo_componentes=&solo_padres=` → `{dispositivos:[]}` `handlers/dispositivos.go:31`
-- `POST /api/dispositivos {codigo_activo, numero_serie, tipo, marca, modelo, estado, ubicacion, sede, parent_id, tipo_componente}` → `201 {id}` valida estado/tipo_componente/parent ciclo
+- `GET /api/dispositivos?q=&estado=&tipo=&ubicacion=&sede=&parent_id=&tipo_componente=&solo_componentes=&solo_padres=&limit=` → `{dispositivos:[]}` `handlers/dispositivos.go:31` `q` busca `LIKE` en `codigo_activo, numero_serie, marca, modelo, tipo, id, especificaciones` (combobox `compu/disco/GGM` o UUID)
+- `POST /api/dispositivos {codigo_activo, numero_serie, tipo (38), marca, modelo, estado, ubicacion, sede, parent_id, tipo_componente (36)}` → `201 {id}` valida `estado`/`tipo`/`tipo_componente`/parent ciclo
 - `GET /api/dispositivos/{id}` → dispositivo + `tintas` si Impresora + `componentes[]` + `etiqueta`
 - `PUT /api/dispositivos/{id}` / `PATCH` → actualiza parcial, registra movimiento si cambia `parent_id`
 - `PATCH /api/dispositivos/{id}/baja {motivo_baja}` → `dado_de_baja`
