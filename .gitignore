@@ -1,0 +1,29 @@
+# Binarios y DB
+inventario.db
+inventario.db-*
+*.db-shm
+*.db-wal
+*.exe
+*.enc
+backend/inventario.db
+backend/*.db
+backend/*.bak
+backend/inventario.exe
+backend/encrypted_storage/
+backend/uploads/
+backend/.env
+
+# Frontend
+frontend/dist/
+frontend/.astro/
+frontend/node_modules/
+frontend/.env
+
+# Logs y temp
+*.log
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+.venv/

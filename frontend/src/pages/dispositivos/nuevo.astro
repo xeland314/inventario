@@ -1,0 +1,162 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Nuevo dispositivo">
+  <main class="max-w-3xl mx-auto p-6">
+    <h1 class="text-2xl font-bold text-slate-900 mb-6">Alta de nuevo dispositivo</h1>
+    <form id="form-nuevo" class="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 shadow-sm">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Código Activo *</label>
+          <input name="codigo_activo" required placeholder="INV-2026-001" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Número de Serie *</label>
+          <input name="numero_serie" required placeholder="SN123456" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Tipo *</label>
+          <select name="tipo" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <option>Laptop</option>
+            <option>Monitor</option>
+            <option>Impresora</option>
+            <option>Router</option>
+            <option>Servidor</option>
+            <option>Tablet</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Marca *</label>
+          <input name="marca" required placeholder="HP, Dell..." class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Modelo *</label>
+          <input name="modelo" required placeholder="ProBook 450" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-600">Especificaciones (JSON o texto)</label>
+        <textarea name="especificaciones" rows="2" placeholder='{"cpu":"i7-12700","ram":"16GB","disco":"512GB SSD"}' class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono"></textarea>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Valor compra</label>
+          <input name="valor_compra" type="number" step="0.01" placeholder="0.00" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Proveedor</label>
+          <input name="proveedor" placeholder="Proveedor S.A." class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Ubicación</label>
+          <input name="ubicacion" placeholder="Piso 2, Sala Servidores..." class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Asignado a</label>
+          <input name="asignado_a" placeholder="correo@empresa.com" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Fecha compra</label>
+          <input name="fecha_compra" type="date" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-600">Estado inicial</label>
+        <select name="estado" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+          <option value="activo">Activo</option>
+          <option value="disponible">Disponible</option>
+          <option value="reserva">Reserva (alias disponible)</option>
+          <option value="en_mantenimiento">En Mantenimiento</option>
+          <option value="en_reparacion">En Reparación</option>
+          <option value="averiado">Averiado</option>
+          <option value="obsoleto">Obsoleto</option>
+          <option value="extraviado">Extraviado</option>
+        </select>
+      </div>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Sede</label>
+          <input name="sede" placeholder="Matriz / Icon / Vicsan..." class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-600">Tipo Componente (si es componente)</label>
+          <select name="tipo_componente" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm">
+            <option value="">— No es componente —</option>
+            <option>Ventilador</option>
+            <option>SSD</option>
+            <option>HDD</option>
+            <option>RAM</option>
+            <option>Bateria</option>
+            <option>Fuente</option>
+            <option>Placa</option>
+            <option>CPU</option>
+            <option>GPU</option>
+            <option>Teclado</option>
+            <option>Pantalla</option>
+            <option>Cargador</option>
+            <option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600">Parent ID (si es componente dentro de otro equipo)</label>
+        <input name="parent_id" placeholder="UUID del equipo padre" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
+        <p class="text-xs text-slate-400 mt-1">Ej: ventilador dentro de GGM-COM-014. Dejar vacío si es equipo independiente.</p>
+      </div>
+
+      <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl transition">Crear dispositivo</button>
+      <p id="msg" class="text-sm text-center"></p>
+    </form>
+  </main>
+
+  <script is:inline>
+    document.getElementById('form-nuevo').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const payload = {
+        codigo_activo: fd.get('codigo_activo'),
+        numero_serie: fd.get('numero_serie'),
+        tipo: fd.get('tipo'),
+        marca: fd.get('marca'),
+        modelo: fd.get('modelo'),
+        especificaciones: fd.get('especificaciones'),
+        valor_compra: parseFloat(fd.get('valor_compra')) || 0,
+        proveedor: fd.get('proveedor'),
+        ubicacion: fd.get('ubicacion'),
+        asignado_a: fd.get('asignado_a') || null,
+        fecha_compra: fd.get('fecha_compra'),
+        estado: fd.get('estado'),
+        sede: fd.get('sede') || null,
+        tipo_componente: fd.get('tipo_componente') || null,
+        parent_id: fd.get('parent_id') || null,
+      };
+      if (!payload.tipo_componente) delete payload.tipo_componente;
+      if (!payload.parent_id) delete payload.parent_id;
+      if (!payload.sede) delete payload.sede;
+      const msg = document.getElementById('msg');
+      msg.textContent = 'Guardando...';
+      msg.className = 'text-sm text-slate-500 text-center';
+      const res = await fetch('/api/dispositivos', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+      const data = await res.json().catch(()=>({}));
+      if (res.ok) {
+        msg.textContent = '✓ Creado correctamente. Redirigiendo...';
+        msg.className = 'text-sm text-emerald-600 text-center';
+        setTimeout(() => location.href = `/dispositivos/${data.id}`, 600);
+      } else {
+        msg.textContent = 'Error: ' + (data.error || JSON.stringify(data));
+        msg.className = 'text-sm text-rose-600 text-center';
+      }
+    });
+  </script>
+</Layout>
