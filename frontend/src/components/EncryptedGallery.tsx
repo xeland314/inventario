@@ -22,6 +22,7 @@ export default function EncryptedGallery({ entidadTipo, entidadId }: Props): Rea
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
 
   const fetchGaleria = (): void => {
     fetch(`/api/evidencia/galeria?tipo=${entidadTipo}&id=${entidadId}`)
@@ -282,7 +283,7 @@ export default function EncryptedGallery({ entidadTipo, entidadId }: Props): Rea
           {fotos.map((foto) => (
             <div key={foto.id} className="group border rounded-lg overflow-hidden bg-slate-50 relative shadow-sm">
               <img
-                src={`/api/evidencia/${foto.id}/raw`}
+                src={token ? `/api/evidencia/${foto.id}/raw?token=${encodeURIComponent(token)}` : `/api/evidencia/${foto.id}/raw`}
                 alt={foto.nombre_original}
                 className="w-full h-36 sm:h-40 object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
