@@ -1,0 +1,11 @@
+---
+import Layout from '../layouts/Layout.astro';
+import EtiquetasManager from '../components/EtiquetasManager.jsx';
+---
+<Layout title="Etiquetas y Escáner">
+  <main class="max-w-6xl mx-auto p-6">
+    <h1 class="text-2xl font-bold mb-2">🏷️ Etiquetas UUID — Generar, Imprimir, Asociar y Escanear</h1>
+    <p class="text-sm text-slate-500 mb-6">Flujo: Genera lote → Imprime QR → Pega en item → Escanea para asociar → Escanea para inventario. UUID v7 recomendado.</p>
+    <EtiquetasManager client:load />
+  </main>
+</Layout>

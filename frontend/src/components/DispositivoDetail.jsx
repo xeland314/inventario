@@ -420,6 +420,66 @@ export default function DispositivoDetail({ id: propId }) {
 
       <EncryptedGallery entidadTipo="dispositivo" entidadId={id} />
 
+      {/* Etiqueta UUID */}
+      <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h2 className="text-lg font-bold text-slate-900 mb-3">🏷️ Etiqueta UUID</h2>
+        {dispositivo.etiqueta ? (
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            <div className="flex-1">
+              <p className="font-mono text-sm font-bold">{dispositivo.etiqueta.id}</p>
+              <p className="text-xs text-slate-500">{dispositivo.etiqueta.codigo_barras} · v{dispositivo.etiqueta.version} · {dispositivo.etiqueta.estado}</p>
+              <p className="text-xs text-slate-400 mt-1">Generada {new Date(dispositivo.etiqueta.generado_en).toLocaleString('es-EC')} {dispositivo.etiqueta.asignado_en ? `· Asignada ${new Date(dispositivo.etiqueta.asignado_en).toLocaleString('es-EC')}` : ''}</p>
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={async () => {
+                    if (!confirm('¿Desasociar etiqueta? Quedará disponible para reutilizar.')) return;
+                    const res = await fetch(`/api/etiquetas/${dispositivo.etiqueta.id}/desasociar`, { method: 'POST' });
+                    if (res.ok) fetchAll(); else alert(await res.text());
+                  }}
+                  className="text-xs bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full hover:bg-amber-100"
+                >
+                  Desasociar
+                </button>
+                <a href={`/etiquetas`} className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-full">
+                  Gestionar etiquetas
+                </a>
+              </div>
+            </div>
+            <div className="bg-white border p-2 rounded-xl">
+              {/* QR inline usando API pública o canvas; fallback texto */}
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(dispositivo.etiqueta.id)}`} alt="QR" className="w-[120px] h-[120px]" />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-500">Sin etiqueta asignada. Escanea una etiqueta disponible o pega su UUID.</p>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const etiquetaId = fd.get('etiqueta_id')?.toString().trim();
+                if (!etiquetaId) return alert('Ingresa UUID');
+                const res = await fetch(`/api/etiquetas/${etiquetaId}/asociar`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ dispositivo_id: id }),
+                });
+                if (res.ok) { e.target.reset(); fetchAll(); } else alert(await res.text());
+              }}
+              className="flex gap-2"
+            >
+              <input name="etiqueta_id" placeholder="UUID v4/v7 o ET-XXXX escaneado" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
+              <button type="submit" className="bg-sky-600 text-white px-5 py-2 rounded-full text-sm hover:bg-sky-500">
+                Asociar
+              </button>
+            </form>
+            <a href="/escaner" className="text-xs text-sky-600 underline">
+              Abrir escáner →
+            </a>
+          </div>
+        )}
+      </section>
+
       {/* Componentes */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <h2 className="text-lg font-bold text-slate-900 mb-4">🧩 Componentes ({dispositivo.componentes?.length || 0})</h2>

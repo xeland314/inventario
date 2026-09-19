@@ -16,8 +16,10 @@ const { title } = Astro.props;
   <body class="bg-slate-50 text-slate-900 font-sans antialiased">
     <nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center sticky top-0 z-50">
       <a href="/" class="font-bold text-lg tracking-tight">🖥️ Inventario <span class="text-sky-400">TI</span></a>
-      <div class="flex gap-6 text-sm">
+      <div class="flex gap-6 text-sm items-center">
         <a href="/" class="hover:text-sky-400 transition">Activos</a>
+        <a href="/etiquetas" class="hover:text-sky-400 transition">🏷️ Etiquetas</a>
+        <a href="/escaner" class="hover:text-sky-400 transition">🔍 Escanear</a>
         <a href="/?estado=dado_de_baja" class="hover:text-rose-400 transition">Bajas</a>
         <a href="/dispositivos/nuevo" class="bg-sky-600 hover:bg-sky-500 px-4 py-1.5 rounded-full text-white font-medium transition">+ Nuevo</a>
       </div>
