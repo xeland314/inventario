@@ -17,6 +17,7 @@ export default function EtiquetasManager(): React.JSX.Element {
   const [cantidad, setCantidad] = useState<number>(10);
   const [version, setVersion] = useState<number>(7);
   const [loading, setLoading] = useState<boolean>(false);
+  const [pdfGenerando, setPdfGenerando] = useState<boolean>(false);
   const [scanned, setScanned] = useState<Record<string, unknown> | null>(null);
   const [asociarId, setAsociarId] = useState<string>('');
   const [dispositivoId, setDispositivoId] = useState<string>('');
@@ -81,15 +82,128 @@ export default function EtiquetasManager(): React.JSX.Element {
     if (res.ok) void fetchEtiquetas(filtro);
   };
 
-  const imprimir = (): void => {
+  const handleImprimirNavegador = (): void => {
     window.print();
+  };
+
+  // PDF con pdf-lib + qrcode (mismo stack que xeland314.github.io MapMaker.tsx:1156)
+  // A4 595x842pt, margen 1cm = 28.35pt, cards cuadradas sin gap, QR solo negro
+  const handleGenerarPDF = async (): Promise<void> => {
+    if (!etiquetas.length) return alert('No hay etiquetas para exportar');
+    setPdfGenerando(true);
+    try {
+      const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
+      const QRCode = (await import('qrcode')).default;
+
+      const pdf = await PDFDocument.create();
+      const font = await pdf.embedFont(StandardFonts.Helvetica);
+      const fontBold = await pdf.embedFont(StandardFonts.HelveticaBold);
+
+      // A4 en puntos (72 DPI)
+      const pageW = 595.28;
+      const pageH = 841.89;
+      const margin = 28.35; // 1cm
+      const cols = 4;
+      const rows = 7; // 28 etiquetas por hoja (4x7), ~39mm alto c/u
+      const cardW = (pageW - margin * 2) / cols;
+      const cardH = (pageH - margin * 2) / rows;
+      const qrSize = Math.min(cardW * 0.62, cardH * 0.55); // ~29mm, legible
+      const qrMarginInCard = 4;
+
+      let page = pdf.addPage([pageW, pageH]);
+      let col = 0;
+      let row = 0;
+
+      for (let idx = 0; idx < etiquetas.length; idx++) {
+        const et = etiquetas[idx];
+        if (row >= rows) {
+          page = pdf.addPage([pageW, pageH]);
+          col = 0;
+          row = 0;
+        }
+        const x = margin + col * cardW;
+        const y = pageH - margin - (row + 1) * cardH; // origen inferior
+
+        // Borde cuadrangular negro, sin radius, solo tinta negra
+        page.drawRectangle({
+          x,
+          y,
+          width: cardW,
+          height: cardH,
+          borderWidth: 0.5,
+          borderColor: rgb(0, 0, 0),
+        });
+
+        // QR solo negro sobre blanco, errorCorrection M, margin 1 (quiet zone)
+        const qrDataUrl = await QRCode.toDataURL(et.id, {
+          width: 400,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+          color: { dark: '#000000', light: '#FFFFFF' },
+        } as unknown as Record<string, unknown>) as string;
+        const qrBytes = Uint8Array.from(atob(qrDataUrl.split(',')[1]), (c) => c.charCodeAt(0));
+        const qrImage = await pdf.embedPng(qrBytes);
+        const qrX = x + (cardW - qrSize) / 2;
+        const qrY = y + cardH - qrSize - 8;
+        page.drawImage(qrImage, { x: qrX, y: qrY, width: qrSize, height: qrSize });
+
+        // Texto solo ET y UUID (no estado/version), centrado, negro
+        const etText = et.codigo_barras;
+        const uuidText = et.id;
+        const etWidth = fontBold.widthOfTextAtSize(etText, 7);
+        page.drawText(etText, {
+          x: x + (cardW - etWidth) / 2,
+          y: qrY - 10,
+          size: 7,
+          font: fontBold,
+          color: rgb(0, 0, 0),
+        });
+        // UUID en dos líneas si hace falta, mono 5pt
+        const uuidFontSize = 5;
+        const uuidW = font.widthOfTextAtSize(uuidText, uuidFontSize);
+        // Si excede ancho, reducir levemente
+        let fs = uuidFontSize;
+        let w = uuidW;
+        while (w > cardW - 6 && fs > 4) {
+          fs -= 0.2;
+          w = font.widthOfTextAtSize(uuidText, fs);
+        }
+        page.drawText(uuidText, {
+          x: x + (cardW - w) / 2,
+          y: qrY - 19,
+          size: fs,
+          font,
+          color: rgb(0, 0, 0),
+        });
+
+        col++;
+        if (col >= cols) {
+          col = 0;
+          row++;
+        }
+      }
+
+      const pdfBytes = await pdf.save();
+      const blob = new Blob([pdfBytes as unknown as BlobPart], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `etiquetas-${filtro || 'todas'}-${new Date().toISOString().slice(0, 10)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error(e);
+      alert('Error generando PDF: ' + (e as Error).message);
+    } finally {
+      setPdfGenerando(false);
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm print:hidden">
         <h2 className="font-bold text-base sm:text-lg mb-2">🏷️ Generar Etiquetas UUID</h2>
-        <p className="text-xs sm:text-sm text-slate-500 mb-4">Genera UUIDs sin asignar, imprímelos y pégalos. Luego escanea para asociar al item. v7 ordenable por tiempo.</p>
+        <p className="text-xs sm:text-sm text-slate-500 mb-4">Genera UUIDs sin asignar, imprímelos y pégalos. Luego escanea para asociar al item. v7 ordenable por tiempo. QR mínimo legible ~15mm (recomendado 20-25mm a 300 DPI).</p>
         <form onSubmit={handleGenerar} className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
           <div className="flex gap-3">
             <div className="flex-1">
@@ -108,14 +222,18 @@ export default function EtiquetasManager(): React.JSX.Element {
             <button type="submit" disabled={loading} className="flex-1 sm:flex-none bg-slate-900 text-white px-6 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-800 disabled:opacity-50 touch-manipulation">
               {loading ? 'Generando...' : '+ Generar'}
             </button>
-            <button type="button" onClick={imprimir} className="flex-1 sm:flex-none border border-slate-200 px-6 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-50 touch-manipulation">
-              🖨️ Imprimir
+            <button type="button" onClick={handleImprimirNavegador} className="flex-1 sm:flex-none border border-slate-200 px-4 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-50 touch-manipulation">
+              🖨️ Print
+            </button>
+            <button type="button" onClick={handleGenerarPDF} disabled={pdfGenerando || !etiquetas.length} className="flex-1 sm:flex-none bg-black text-white px-4 py-3 min-h-[44px] rounded-full text-sm hover:bg-zinc-800 disabled:opacity-50 touch-manipulation">
+              {pdfGenerando ? 'Generando PDF...' : '📄 PDF 1cm'}
             </button>
           </div>
         </form>
+        <p className="text-[11px] text-slate-400 mt-2">PDF: A4, margen 1cm, 4×7 cards cuadradas sin espacios (28 por hoja), borde negro 0.5pt, QR solo negro. Tamaño QR ~21mm (legible desde 10cm); mínimo técnico ~15mm con corrección M, recomendado 20-25mm.</p>
       </div>
 
-      <div className="flex gap-2 flex-wrap overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-2 flex-wrap overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 print:hidden">
         {['disponible', 'impreso', 'asignado', 'anulado', ''].map((e) => (
           <button key={e || 'todos'} type="button" onClick={() => setFiltro(e)} className={`px-4 py-2.5 min-h-[44px] rounded-full text-xs font-medium border touch-manipulation ${filtro === e ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
             {e || 'todos'}
@@ -129,7 +247,7 @@ export default function EtiquetasManager(): React.JSX.Element {
         onDeviceFound={(data: Record<string, unknown>) => setScanned(data)}
       />
       {scanned && (
-        <div className="bg-white p-4 rounded-xl border border-slate-200">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 print:hidden">
           <h4 className="font-bold text-sm mb-2">Resultado escaneo</h4>
           <pre className="text-xs bg-slate-50 p-3 rounded-lg overflow-auto max-h-64">{JSON.stringify(scanned, null, 2)}</pre>
           {(scanned as { dispositivo?: { id: string; codigo_activo: string } }).dispositivo && (
@@ -140,7 +258,7 @@ export default function EtiquetasManager(): React.JSX.Element {
         </div>
       )}
 
-      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200">
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 print:hidden">
         <h3 className="font-bold mb-3 text-sm sm:text-base">🔗 Asociar etiqueta a dispositivo</h3>
         <form onSubmit={handleAsociar} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input value={asociarId} onChange={(e) => setAsociarId(e.target.value)} placeholder="UUID etiqueta (escaneado)" className="border border-slate-200 rounded-xl px-3 py-3 min-h-[44px] text-sm font-mono focus:border-sky-500 focus:outline-none" />
@@ -152,24 +270,21 @@ export default function EtiquetasManager(): React.JSX.Element {
         <p className="text-xs text-slate-400 mt-2">Escanea arriba — se auto-rellena.</p>
       </div>
 
-      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200">
-        <h3 className="font-bold mb-4 text-sm sm:text-base">Etiquetas {filtro || 'todas'} — lista para pegar</h3>
+      {/* Vista pantalla */}
+      <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 print:hidden">
+        <h3 className="font-bold mb-4 text-sm sm:text-base">Etiquetas {filtro || 'todas'} — vista previa (pantalla)</h3>
         {loading ? (
           <p className="text-sm text-slate-400">Cargando...</p>
         ) : etiquetas.length === 0 ? (
           <p className="text-sm text-slate-400">Sin etiquetas en este estado. Genera un lote.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 print:grid-cols-3 print:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {etiquetas.map((e) => (
-              <div key={e.id} className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-white flex flex-col items-center text-center break-all print:border-black">
-                <QRCodeSVG value={e.id} size={112} className="w-28 h-28 sm:w-[112px] sm:h-[112px]" />
+              <div key={e.id} className="border border-slate-200 rounded-xl p-3 sm:p-4 bg-white flex flex-col items-center text-center break-all">
+                <QRCodeSVG value={e.id} size={112} bgColor="#FFFFFF" fgColor="#000000" level="M" includeMargin={false} className="w-28 h-28 sm:w-[112px] sm:h-[112px]" />
                 <p className="font-mono text-[11px] mt-2 font-bold">{e.codigo_barras}</p>
                 <p className="font-mono text-[9px] text-slate-500 break-all px-1">{e.id}</p>
-                <p className="text-[10px] mt-2">
-                  <span className={`px-2 py-1 rounded-full text-[10px] ${e.estado === 'disponible' ? 'bg-emerald-100 text-emerald-700' : e.estado === 'asignado' ? 'bg-sky-100 text-sky-700' : 'bg-slate-100'}`}>{e.estado} v{e.version}</span>
-                </p>
-                {e.dispositivo_id && <p className="text-[10px] text-slate-600 mt-1">→ {e.dispositivo_id.slice(0, 8)}</p>}
-                <div className="flex flex-wrap justify-center gap-1.5 mt-3 print:hidden">
+                <div className="flex flex-wrap justify-center gap-1.5 mt-3">
                   {e.estado === 'disponible' && (
                     <button type="button" onClick={() => handleImpreso(e.id)} className="text-xs bg-slate-900 text-white px-3 py-2 min-h-[36px] rounded-full touch-manipulation">
                       Impreso
@@ -192,7 +307,20 @@ export default function EtiquetasManager(): React.JSX.Element {
         )}
       </div>
 
-      <style>{`@media print { nav, footer, button { display: none !important; } }`}</style>
+      {/* Vista impresión: cuadrada, sin gaps, solo negro, UUID+ET */}
+      <div className="hidden print:block">
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)', gap: 0 }}>
+          {etiquetas.map((e) => (
+            <div key={e.id} className="border border-black flex flex-col items-center justify-center text-center p-2" style={{ aspectRatio: '1 / 1.18', borderWidth: '0.5pt' }}>
+              <QRCodeSVG value={e.id} size={96} bgColor="#FFFFFF" fgColor="#000000" level="M" includeMargin={false} />
+              <p style={{ fontFamily: 'monospace', fontSize: '7pt', fontWeight: 700, marginTop: '4pt' }}>{e.codigo_barras}</p>
+              <p style={{ fontFamily: 'monospace', fontSize: '5pt', color: '#000', wordBreak: 'break-all', lineHeight: 1.1 }}>{e.id}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`@page { margin: 1cm; size: A4; } @media print { nav, footer { display: none !important; } .print\\:hidden { display: none !important; } }`}</style>
     </div>
   );
 }
