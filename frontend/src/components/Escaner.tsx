@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, Camera, ScanLine, Tag, X } from 'lucide-react';
 
 interface EscanerProps {
   onScan?: (uuid: string) => void;
@@ -93,22 +94,22 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
   return (
     <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-        <h3 className="font-bold text-slate-900 text-base">🔍 Escáner de Etiquetas</h3>
+        <h3 className="font-bold text-slate-900 text-base inline-flex items-center gap-2"><ScanLine className="w-5 h-5" /> Escáner de Etiquetas</h3>
         {!scanning ? (
           <button
             type="button"
             onClick={startScan}
-            className="w-full sm:w-auto bg-slate-900 text-white px-5 py-3 min-h-[44px] rounded-full text-sm font-medium hover:bg-slate-800 touch-manipulation"
+            className="w-full sm:w-auto bg-slate-900 text-white px-5 py-3 min-h-[44px] rounded-full text-sm font-medium hover:bg-slate-800 touch-manipulation inline-flex items-center justify-center gap-2"
           >
-            📷 Iniciar cámara
+            <Camera className="w-4 h-4" /> Iniciar cámara
           </button>
         ) : (
           <button
             type="button"
             onClick={stopScan}
-            className="w-full sm:w-auto bg-red-50 border border-red-200 text-red-700 px-5 py-3 min-h-[44px] rounded-full text-sm touch-manipulation"
+            className="w-full sm:w-auto bg-red-50 border border-red-200 text-red-700 px-5 py-3 min-h-[44px] rounded-full text-sm touch-manipulation inline-flex items-center justify-center gap-2"
           >
-            ✕ Detener
+            <X className="w-4 h-4" /> Detener
           </button>
         )}
       </div>
@@ -122,7 +123,7 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
         <p className="text-xs text-slate-500 text-center px-2">Apunta al QR de la etiqueta (UUID v4/v7 o ET-XXXX). Requiere HTTPS o localhost. En móvil, mantén el QR centrado y a 15-20 cm.</p>
       )}
 
-      {error && <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-lg text-xs">⚠️ {error}</div>}
+      {error && <div className="bg-amber-50 border border-amber-200 text-amber-800 px-3 py-2 rounded-lg text-xs inline-flex items-start gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> <span>{error}</span></div>}
 
       {lastResult && (
         <div className="bg-emerald-50 border border-emerald-200 px-3 py-3 rounded-lg text-xs break-all">
@@ -144,12 +145,12 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
             </div>
           ) : (scannedDevice as { etiqueta?: { id: string; codigo_barras: string; estado: string } }).etiqueta ? (
             <div>
-              <p className="font-bold text-amber-700">🏷️ Etiqueta sin asignar</p>
+              <p className="font-bold text-amber-700 inline-flex items-center gap-1.5"><Tag className="w-4 h-4" /> Etiqueta sin asignar</p>
               <p className="font-mono text-xs break-all mt-1">{(scannedDevice as { etiqueta: { id: string } }).etiqueta.id} {(scannedDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras ? `· ${(scannedDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras}` : ''} · {(scannedDevice as { etiqueta: { estado: string } }).etiqueta.estado}</p>
               <a href="/etiquetas" className="text-sky-600 underline text-xs mt-2 inline-block">Asociar en Etiquetas →</a>
             </div>
           ) : (
-            <p className="text-amber-700 text-xs">⚠️ {(scannedDevice as { error?: string }).error || 'Etiqueta no encontrada'}</p>
+            <p className="text-amber-700 text-xs inline-flex items-start gap-1.5"><AlertTriangle className="w-4 h-4 shrink-0" /> {(scannedDevice as { error?: string }).error || 'Etiqueta no encontrada'}</p>
           )}
         </div>
       )}

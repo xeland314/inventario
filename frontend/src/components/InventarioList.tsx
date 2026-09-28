@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertTriangle, Building2, Calendar, DollarSign, Link2, Tag } from 'lucide-react';
 
 interface Dispositivo {
   id: string;
@@ -134,7 +135,7 @@ export default function InventarioList(): React.JSX.Element {
         <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4">
           {(etiquetaDevice as { dispositivo?: { id: string; codigo_activo: string; marca: string; modelo: string } }).dispositivo ? (
             <div>
-              <p className="text-xs font-bold text-sky-800">🔗 Etiqueta encontrada — dispositivo asociado</p>
+              <p className="text-xs font-bold text-sky-800 inline-flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> Etiqueta encontrada — dispositivo asociado</p>
               <a href={`/dispositivos/${(etiquetaDevice as { dispositivo: { id: string } }).dispositivo.id}`} className="block mt-2 bg-white border border-sky-200 rounded-xl p-3 hover:bg-sky-50">
                 <span className="font-bold text-slate-900">{(etiquetaDevice as { dispositivo: { marca: string; modelo: string } }).dispositivo.marca} {(etiquetaDevice as { dispositivo: { modelo: string } }).dispositivo.modelo}</span>
                 <span className="text-xs font-mono text-slate-500 block">{(etiquetaDevice as { dispositivo: { codigo_activo: string; id: string } }).dispositivo.codigo_activo} · {(etiquetaDevice as { dispositivo: { id: string } }).dispositivo.id}</span>
@@ -143,7 +144,7 @@ export default function InventarioList(): React.JSX.Element {
             </div>
           ) : (
             <div>
-              <p className="text-xs font-bold text-amber-800">🏷️ Etiqueta encontrada pero sin asignar</p>
+              <p className="text-xs font-bold text-amber-800 inline-flex items-center gap-1"><Tag className="w-3.5 h-3.5" /> Etiqueta encontrada pero sin asignar</p>
               <p className="font-mono text-xs text-slate-600 break-all mt-1">{(etiquetaDevice as { etiqueta?: { id: string; codigo_barras: string } }).etiqueta?.id || busqueda} {(etiquetaDevice as { etiqueta?: { codigo_barras: string } }).etiqueta?.codigo_barras ? `· ${(etiquetaDevice as { etiqueta: { codigo_barras: string } }).etiqueta.codigo_barras}` : ''}</p>
               <a href="/etiquetas" className="text-sky-600 text-xs underline mt-2 inline-block">Asociar en Etiquetas →</a>
             </div>
@@ -152,8 +153,8 @@ export default function InventarioList(): React.JSX.Element {
       )}
 
       {error && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm">
-          ⚠️ No se pudo conectar al backend ({error}) — verifica que Go corre en :8080
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl text-sm inline-flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> No se pudo conectar al backend ({error}) — verifica que Go corre en :8080
         </div>
       )}
 
@@ -203,12 +204,12 @@ export default function InventarioList(): React.JSX.Element {
                 </span>
               </div>
               <div className="flex gap-3 mt-4 text-xs text-slate-500 border-t border-slate-100 pt-3">
-                <span>💰 ${d.valor_compra}</span>
-                <span>🏢 {d.proveedor}</span>
+                <span className="inline-flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> ${d.valor_compra}</span>
+                <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> {d.proveedor}</span>
               </div>
               {d.fecha_baja && (
-                <p className="text-xs text-rose-600 mt-2">
-                  📅 Baja: {d.fecha_baja} — {d.motivo_baja}
+                <p className="text-xs text-rose-600 mt-2 inline-flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5" /> Baja: {d.fecha_baja} — {d.motivo_baja}
                 </p>
               )}
             </a>

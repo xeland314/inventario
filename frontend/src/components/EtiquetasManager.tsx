@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Escaner from './Escaner';
 import DeviceSearchCombobox from './DeviceSearchCombobox';
+import { FileText, Link2, Printer, Tag } from 'lucide-react';
 
 interface Etiqueta {
   id: string;
@@ -202,7 +203,7 @@ export default function EtiquetasManager(): React.JSX.Element {
   return (
     <div className="space-y-6">
       <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm print:hidden">
-        <h2 className="font-bold text-base sm:text-lg mb-2">🏷️ Generar Etiquetas UUID</h2>
+        <h2 className="font-bold text-base sm:text-lg mb-2 inline-flex items-center gap-2"><Tag className="w-5 h-5" /> Generar Etiquetas UUID</h2>
         <p className="text-xs sm:text-sm text-slate-500 mb-4">Genera UUIDs sin asignar, imprímelos y pégalos. Luego escanea para asociar al item. v7 ordenable por tiempo. QR mínimo legible ~15mm (recomendado 20-25mm a 300 DPI).</p>
         <form onSubmit={handleGenerar} className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
           <div className="flex gap-3">
@@ -222,11 +223,11 @@ export default function EtiquetasManager(): React.JSX.Element {
             <button type="submit" disabled={loading} className="flex-1 sm:flex-none bg-slate-900 text-white px-6 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-800 disabled:opacity-50 touch-manipulation">
               {loading ? 'Generando...' : '+ Generar'}
             </button>
-            <button type="button" onClick={handleImprimirNavegador} className="flex-1 sm:flex-none border border-slate-200 px-4 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-50 touch-manipulation">
-              🖨️ Print
+            <button type="button" onClick={handleImprimirNavegador} className="flex-1 sm:flex-none border border-slate-200 px-4 py-3 min-h-[44px] rounded-full text-sm hover:bg-slate-50 touch-manipulation inline-flex items-center justify-center gap-1.5">
+              <Printer className="w-4 h-4" /> Print
             </button>
             <button type="button" onClick={handleGenerarPDF} disabled={pdfGenerando || !etiquetas.length} className="flex-1 sm:flex-none bg-black text-white px-4 py-3 min-h-[44px] rounded-full text-sm hover:bg-zinc-800 disabled:opacity-50 touch-manipulation">
-              {pdfGenerando ? 'Generando PDF...' : '📄 PDF 1cm'}
+              {pdfGenerando ? 'Generando PDF...' : <span className="inline-flex items-center gap-1"><FileText className="w-4 h-4" /> PDF 1cm</span>}
             </button>
           </div>
         </form>
@@ -259,7 +260,7 @@ export default function EtiquetasManager(): React.JSX.Element {
       )}
 
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 print:hidden">
-        <h3 className="font-bold mb-3 text-sm sm:text-base">🔗 Asociar etiqueta a dispositivo</h3>
+        <h3 className="font-bold mb-3 text-sm sm:text-base inline-flex items-center gap-2"><Link2 className="w-4 h-4" /> Asociar etiqueta a dispositivo</h3>
         <form onSubmit={handleAsociar} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input value={asociarId} onChange={(e) => setAsociarId(e.target.value)} placeholder="UUID etiqueta (escaneado)" className="border border-slate-200 rounded-xl px-3 py-3 min-h-[44px] text-sm font-mono focus:border-sky-500 focus:outline-none" />
           <DeviceSearchCombobox value={dispositivoId} onChange={(id) => setDispositivoId(id)} placeholder="Buscar compu, disco, GGM-... o pegar UUID" label="" />

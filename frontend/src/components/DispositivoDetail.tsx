@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import EncryptedGallery from './EncryptedGallery';
 import InkLevelGauge from './InkLevelGauge';
+import {
+  AlertTriangle,
+  Building2,
+  Calendar,
+  Clock,
+  DollarSign,
+  FileText,
+  Link2,
+  MapPin,
+  Pencil,
+  Puzzle,
+  Save,
+  Store,
+  Tag,
+  Trash2,
+  User,
+  X,
+} from 'lucide-react';
 
 export default function DispositivoDetail({ id: propId }) {
   const getRealId = () => {
@@ -230,7 +248,7 @@ export default function DispositivoDetail({ id: propId }) {
   if (error)
     return (
       <div className="bg-rose-50 border border-rose-200 text-rose-700 p-6 rounded-xl">
-        <p>⚠️ {error}</p>
+        <p className="inline-flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {error}</p>
         <a href="/" className="text-sm underline mt-2 inline-block">
           ← Volver al inventario
         </a>
@@ -254,14 +272,14 @@ export default function DispositivoDetail({ id: propId }) {
               {dispositivo.tipo} · {dispositivo.especificaciones || 'Sin especificaciones'}
             </p>
             <div className="flex flex-wrap gap-4 mt-4 text-xs text-slate-600">
-              <span>💰 <strong>Valor:</strong> ${dispositivo.valor_compra}</span>
-              <span>🏢 <strong>Proveedor:</strong> {dispositivo.proveedor}</span>
-              <span>📍 <strong>Ubicación:</strong> {dispositivo.ubicacion}</span>
-              {dispositivo.sede && <span>🏬 <strong>Sede:</strong> {dispositivo.sede}</span>}
-              <span>👤 <strong>Asignado:</strong> {dispositivo.asignado_a || '—'}</span>
-              <span>📅 <strong>Compra:</strong> {dispositivo.fecha_compra}</span>
-              {dispositivo.tipo_componente && <span>🧩 <strong>Componente:</strong> {dispositivo.tipo_componente}</span>}
-              {dispositivo.parent_id && <span>🔗 <strong>Padre:</strong> <a href={`/dispositivos/${dispositivo.parent_id}`} className="text-sky-600 underline">{dispositivo.parent_id.slice(0,8)}</a></span>}
+              <span className="inline-flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> <strong>Valor:</strong> ${dispositivo.valor_compra}</span>
+              <span className="inline-flex items-center gap-1"><Building2 className="w-3.5 h-3.5" /> <strong>Proveedor:</strong> {dispositivo.proveedor}</span>
+              <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> <strong>Ubicación:</strong> {dispositivo.ubicacion}</span>
+              {dispositivo.sede && <span className="inline-flex items-center gap-1"><Store className="w-3.5 h-3.5" /> <strong>Sede:</strong> {dispositivo.sede}</span>}
+              <span className="inline-flex items-center gap-1"><User className="w-3.5 h-3.5" /> <strong>Asignado:</strong> {dispositivo.asignado_a || '—'}</span>
+              <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> <strong>Compra:</strong> {dispositivo.fecha_compra}</span>
+              {dispositivo.tipo_componente && <span className="inline-flex items-center gap-1"><Puzzle className="w-3.5 h-3.5" /> <strong>Componente:</strong> {dispositivo.tipo_componente}</span>}
+              {dispositivo.parent_id && <span className="inline-flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> <strong>Padre:</strong> <a href={`/dispositivos/${dispositivo.parent_id}`} className="text-sky-600 underline">{dispositivo.parent_id.slice(0,8)}</a></span>}
             </div>
             {dispositivo.fecha_baja && (
               <div className="mt-4 bg-rose-50 border border-rose-200 text-rose-700 px-4 py-2 rounded-lg text-sm">
@@ -285,11 +303,11 @@ export default function DispositivoDetail({ id: propId }) {
               {dispositivo.estado}
             </span>
             <div className="flex gap-2 mt-2">
-              <button onClick={() => setEditingDisp(true)} className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-full font-medium">
-                ✏️ Editar datos
+              <button onClick={() => setEditingDisp(true)} className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-full font-medium inline-flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5" /> Editar datos
               </button>
-              <button onClick={handleDispDelete} className="text-xs bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 px-4 py-2 rounded-full font-medium">
-                🗑️ Eliminar
+              <button onClick={handleDispDelete} className="text-xs bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 px-4 py-2 rounded-full font-medium inline-flex items-center gap-1.5">
+                <Trash2 className="w-3.5 h-3.5" /> Eliminar
               </button>
             </div>
             <a href="/" className="text-xs text-slate-500 hover:text-slate-700 mt-1">
@@ -300,9 +318,9 @@ export default function DispositivoDetail({ id: propId }) {
       ) : (
         <form onSubmit={handleDispUpdate} className="bg-white p-6 rounded-2xl border border-sky-200 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-slate-900">✏️ Editar dispositivo</h2>
-            <button type="button" onClick={() => setEditingDisp(false)} className="text-sm text-slate-500 hover:text-slate-700">
-              Cancelar ×
+            <h2 className="text-lg font-bold text-slate-900 inline-flex items-center gap-2"><Pencil className="w-5 h-5" /> Editar dispositivo</h2>
+            <button type="button" onClick={() => setEditingDisp(false)} className="text-sm text-slate-500 hover:text-slate-700 inline-flex items-center gap-1">
+              Cancelar <X className="w-4 h-4" />
             </button>
           </div>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -451,8 +469,8 @@ export default function DispositivoDetail({ id: propId }) {
               <input name="parent_id" defaultValue={dispositivo.parent_id || ''} placeholder="UUID padre" className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
             </div>
           </div>
-          <button type="submit" disabled={savingDisp} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition">
-            {savingDisp ? 'Guardando...' : '💾 Guardar cambios'}
+          <button type="submit" disabled={savingDisp} className="w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition inline-flex items-center justify-center gap-2">
+            <Save className="w-4 h-4" /> {savingDisp ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </form>
       )}
@@ -465,7 +483,7 @@ export default function DispositivoDetail({ id: propId }) {
 
       {/* Etiqueta UUID */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 mb-3">🏷️ Etiqueta UUID</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-3 inline-flex items-center gap-2"><Tag className="w-5 h-5" /> Etiqueta UUID</h2>
         {dispositivo.etiqueta ? (
           <div className="flex flex-col sm:flex-row gap-4 items-start">
             <div className="flex-1">
@@ -525,7 +543,7 @@ export default function DispositivoDetail({ id: propId }) {
 
       {/* Componentes */}
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">🧩 Componentes ({dispositivo.componentes?.length || 0})</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-4 inline-flex items-center gap-2"><Puzzle className="w-5 h-5" /> Componentes ({dispositivo.componentes?.length || 0})</h2>
         {dispositivo.parent_id && <p className="text-xs text-slate-500 mb-2">Este equipo es componente de: <a href={`/dispositivos/${dispositivo.parent_id}`} className="text-sky-600 underline">{dispositivo.parent_id}</a> ({dispositivo.tipo_componente})</p>}
         {(!dispositivo.componentes || dispositivo.componentes.length === 0) ? (
           <p className="text-sm text-slate-400">Sin componentes asignados. Ej: ventilador, SSD, RAM dentro de este equipo.</p>
@@ -587,7 +605,7 @@ export default function DispositivoDetail({ id: propId }) {
       </section>
 
       <section className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">🛠️ Historial de Mantenimientos</h2>
+        <h2 className="text-lg font-bold text-slate-900 mb-4 inline-flex items-center gap-2"><FileText className="w-5 h-5" /> Historial de Mantenimientos</h2>
         {mantenimientos.length === 0 ? (
           <p className="text-sm text-slate-400">Sin mantenimientos registrados.</p>
         ) : (
@@ -621,7 +639,7 @@ export default function DispositivoDetail({ id: propId }) {
                       <div className="flex-1">
                         <p className="font-semibold text-sm text-slate-800">{m.realizado_por}</p>
                         <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap">{m.descripcion}</p>
-                        <p className="text-xs text-slate-400 mt-2">🕒 {m.fecha_hora} · 💲 {m.costo}</p>
+                        <p className="text-xs text-slate-400 mt-2 inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {m.fecha_hora} · <DollarSign className="w-3 h-3" /> {m.costo}</p>
                       </div>
                       <div className="flex flex-col gap-2 items-end shrink-0">
                         {m.url_pdf && (
@@ -629,17 +647,17 @@ export default function DispositivoDetail({ id: propId }) {
                             href={m.url_pdf}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-700 text-center"
+                            className="text-xs bg-slate-900 text-white px-3 py-1.5 rounded-full hover:bg-slate-700 text-center inline-flex items-center gap-1"
                           >
-                            📄 Ver informe
+                            <FileText className="w-3 h-3" /> Ver informe
                           </a>
                         )}
                         <div className="flex gap-2">
-                          <button onClick={() => setEditingId(m.id)} className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-full">
-                            ✏️ Editar
+                          <button onClick={() => setEditingId(m.id)} className="text-xs bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                            <Pencil className="w-3 h-3" /> Editar
                           </button>
-                          <button onClick={() => handleDelete(m.id)} className="text-xs bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-full">
-                            🗑️ Borrar
+                          <button onClick={() => handleDelete(m.id)} className="text-xs bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 px-3 py-1.5 rounded-full inline-flex items-center gap-1">
+                            <Trash2 className="w-3 h-3" /> Borrar
                           </button>
                         </div>
                       </div>
@@ -674,7 +692,7 @@ export default function DispositivoDetail({ id: propId }) {
 
       {dispositivo.estado !== 'dado_de_baja' && (
         <details className="bg-rose-50 border border-rose-200 p-5 rounded-2xl">
-          <summary className="font-semibold text-sm text-rose-700 cursor-pointer">⚠️ Dar de baja este equipo</summary>
+          <summary className="font-semibold text-sm text-rose-700 cursor-pointer inline-flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> Dar de baja este equipo</summary>
           <form onSubmit={handleBaja} className="mt-4 flex gap-3">
             <input name="motivo_baja" placeholder="Motivo (ej: obsoleto, daño irreparable)" required className="flex-1 border border-rose-200 rounded-lg px-3 py-2 text-sm" />
             <button type="submit" className="bg-rose-600 hover:bg-rose-500 text-white px-6 py-2 rounded-lg text-sm font-semibold">

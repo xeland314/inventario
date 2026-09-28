@@ -5,7 +5,7 @@ import EstadisticasPanel from '../components/EstadisticasPanel';
 <Layout title="Estadísticas">
   <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
     <header>
-      <h1 class="text-3xl font-black text-slate-900">📊 Estadísticas</h1>
+      <h1 class="text-3xl font-black text-slate-900 inline-flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg> Estadísticas</h1>
       <p class="text-sm text-slate-500 mt-1">Panel /api/estadisticas — valor inventario, costos, tintas, obsolescencia y planes</p>
     </header>
     <EstadisticasPanel client:load />

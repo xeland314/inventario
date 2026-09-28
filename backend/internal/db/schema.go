@@ -187,6 +187,43 @@ CREATE TABLE IF NOT EXISTS toma_items (
 CREATE INDEX IF NOT EXISTS idx_tomas_sede ON tomas_fisicas(sede);
 CREATE INDEX IF NOT EXISTS idx_tomas_estado ON tomas_fisicas(estado);
 CREATE INDEX IF NOT EXISTS idx_toma_items_toma ON toma_items(toma_id);
+
+CREATE TABLE IF NOT EXISTS frascos (
+  id TEXT PRIMARY KEY,
+  codigo TEXT UNIQUE NOT NULL,
+  marca TEXT NOT NULL,
+  modelo_compat TEXT,
+  color TEXT NOT NULL CHECK (color IN ('negro','cian','magenta','amarillo','negro_foto','gris','otro')),
+  capacidad_ml INTEGER,
+  nivel_porcentaje INTEGER NOT NULL DEFAULT 100 CHECK (nivel_porcentaje BETWEEN 0 AND 100),
+  cantidad_actual INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_actual >= 0),
+  cantidad_minima INTEGER NOT NULL DEFAULT 2 CHECK (cantidad_minima >= 0),
+  sede TEXT,
+  ubicacion TEXT,
+  proveedor TEXT,
+  lote TEXT,
+  vencimiento TEXT,
+  costo_unitario REAL NOT NULL DEFAULT 0,
+  creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+  actualizado_en TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_frascos_color ON frascos(color);
+CREATE INDEX IF NOT EXISTS idx_frascos_sede ON frascos(sede);
+CREATE INDEX IF NOT EXISTS idx_frascos_marca ON frascos(marca);
+CREATE TABLE IF NOT EXISTS frasco_movimientos (
+  id TEXT PRIMARY KEY,
+  frasco_id TEXT NOT NULL REFERENCES frascos(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('ingreso','consumo','ajuste','traslado','baja')),
+  cantidad INTEGER NOT NULL CHECK (cantidad != 0),
+  cantidad_previa INTEGER NOT NULL,
+  cantidad_nueva INTEGER NOT NULL,
+  dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL,
+  realizado_por TEXT,
+  nota TEXT,
+  fecha TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_frasco_mov_frasco ON frasco_movimientos(frasco_id);
+CREATE INDEX IF NOT EXISTS idx_frasco_mov_fecha ON frasco_movimientos(fecha);
 `
 
 func InitDB(database *sql.DB) error {
@@ -237,6 +274,7 @@ func InitDB(database *sql.DB) error {
 		`ALTER TABLE dispositivos ADD COLUMN sede TEXT`,
 		`ALTER TABLE dispositivos ADD COLUMN actualizado_en TEXT`,
 		`ALTER TABLE niveles_tinta ADD COLUMN codigo_tinta INTEGER`,
+		`ALTER TABLE frascos ADD COLUMN nivel_porcentaje INTEGER NOT NULL DEFAULT 100 CHECK (nivel_porcentaje BETWEEN 0 AND 100)`,
 	}
 	for _, m := range migrations {
 		database.Exec(m)
@@ -303,6 +341,13 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_tomas_sede ON tomas_fisicas(sede)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_tomas_estado ON tomas_fisicas(estado)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_toma_items_toma ON toma_items(toma_id)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS frascos (id TEXT PRIMARY KEY, codigo TEXT UNIQUE NOT NULL, marca TEXT NOT NULL, modelo_compat TEXT, color TEXT NOT NULL CHECK (color IN ('negro','cian','magenta','amarillo','negro_foto','gris','otro')), capacidad_ml INTEGER, nivel_porcentaje INTEGER NOT NULL DEFAULT 100 CHECK (nivel_porcentaje BETWEEN 0 AND 100), cantidad_actual INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_actual >= 0), cantidad_minima INTEGER NOT NULL DEFAULT 2 CHECK (cantidad_minima >= 0), sede TEXT, ubicacion TEXT, proveedor TEXT, lote TEXT, vencimiento TEXT, costo_unitario REAL NOT NULL DEFAULT 0, creado_en TEXT NOT NULL DEFAULT (datetime('now')), actualizado_en TEXT)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frascos_color ON frascos(color)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frascos_sede ON frascos(sede)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frascos_marca ON frascos(marca)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS frasco_movimientos (id TEXT PRIMARY KEY, frasco_id TEXT NOT NULL REFERENCES frascos(id) ON DELETE CASCADE, tipo TEXT NOT NULL CHECK (tipo IN ('ingreso','consumo','ajuste','traslado','baja')), cantidad INTEGER NOT NULL CHECK (cantidad != 0), cantidad_previa INTEGER NOT NULL, cantidad_nueva INTEGER NOT NULL, dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL, realizado_por TEXT, nota TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frasco_mov_frasco ON frasco_movimientos(frasco_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frasco_mov_fecha ON frasco_movimientos(fecha)`)
 	// Migración auditoria para incluir entidad 'toma' y accion 'cerrar'/'escanear' si tabla vieja existe
 	func() {
 		var sqlDef string

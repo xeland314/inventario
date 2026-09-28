@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AlertTriangle, Calendar } from 'lucide-react';
 
 interface DashboardData {
   conteo_estado: Record<string, number>;
@@ -56,7 +57,7 @@ export default function EstadisticasPanel() {
   useEffect(() => { fetchData(umbral); }, []);
 
   if (loading) return <div className="text-center py-12 text-slate-400">Cargando estadísticas...</div>;
-  if (error) return <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl">⚠️ {error} — verifica :8080</div>;
+  if (error) return <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl inline-flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {error} — verifica :8080</div>;
   if (!data) return null;
 
   const totalDispositivos = Object.values(data.conteo_estado).reduce((a, b) => a + b, 0);
@@ -255,7 +256,7 @@ export default function EstadisticasPanel() {
       </div>
 
       <div className="flex gap-2 text-xs">
-        <a href="/calendario" className="bg-slate-900 text-white px-4 py-2 rounded-full font-semibold">📅 Ver calendario mantenimientos →</a>
+        <a href="/calendario" className="bg-slate-900 text-white px-4 py-2 rounded-full font-semibold inline-flex items-center gap-1.5"><Calendar className="w-4 h-4" /> Ver calendario mantenimientos →</a>
         <a href="/" className="bg-white border border-slate-200 px-4 py-2 rounded-full">← Inventario</a>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, BarChart3, Calendar, FileText, RefreshCw } from 'lucide-react';
 
 interface Mantenimiento {
   id: string;
@@ -119,7 +120,7 @@ export default function CalendarioMantenimiento() {
   while (cells.length % 7 !== 0) cells.push(null);
 
   if (loading) return <div className="text-center py-12 text-slate-400">Cargando calendario...</div>;
-  if (error) return <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl">⚠️ {error}</div>;
+  if (error) return <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-xl inline-flex items-center gap-2"><AlertTriangle className="w-4 h-4" /> {error}</div>;
 
   const dayEvents = selectedDay ? eventsByDate.get(selectedDay) || [] : [];
 
@@ -139,7 +140,7 @@ export default function CalendarioMantenimiento() {
             <option value="mantenimientos">Solo mantenimientos</option>
             <option value="planes">Solo planes</option>
           </select>
-          <a href="/api/planes/calendario.ics" className="text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:bg-slate-50">⬇ ICS</a>
+          <a href="/api/planes/calendario.ics" className="text-xs bg-white border border-slate-200 px-3 py-1.5 rounded-full hover:bg-slate-50 inline-flex items-center gap-1"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg> ICS</a>
         </div>
       </div>
 
@@ -189,7 +190,7 @@ export default function CalendarioMantenimiento() {
         <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <div className="flex justify-between items-start gap-3">
             <div>
-              <h3 className="font-black text-slate-900">📅 {selectedDay}</h3>
+              <h3 className="font-black text-slate-900 inline-flex items-center gap-2"><Calendar className="w-5 h-5" /> {selectedDay}</h3>
               <p className="text-xs text-slate-500">{dayEvents.length} evento{dayEvents.length !== 1 ? 's' : ''} · click en equipo para ir a ficha</p>
             </div>
             <button onClick={() => setSelectedDay(null)} className="text-xs border border-slate-200 px-3 py-1.5 rounded-full hover:bg-slate-50">Cerrar ×</button>
@@ -209,7 +210,7 @@ export default function CalendarioMantenimiento() {
                       <p className="text-sm font-bold text-slate-900 truncate">{e.title}</p>
                       <p className="text-xs text-slate-600 truncate">{e.subtitle}</p>
                       <p className="text-xs text-slate-500 mt-1 line-clamp-2">{isMant ? (mant.descripcion) : plan.descripcion}</p>
-                      {isMant && mant.url_pdf && <a href={mant.url_pdf} target="_blank" rel="noreferrer" className="text-xs text-sky-600 underline">📄 Ver PDF</a>}
+                      {isMant && mant.url_pdf && <a href={mant.url_pdf} target="_blank" rel="noreferrer" className="text-xs text-sky-600 underline inline-flex items-center gap-1"><FileText className="w-3 h-3" /> Ver PDF</a>}
                     </div>
                     <div className="shrink-0 flex flex-col gap-1">
                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full text-white text-center ${e.color}`}>{isMant ? 'MANT' : 'PLAN'}</span>
@@ -223,8 +224,8 @@ export default function CalendarioMantenimiento() {
             </div>
           )}
           <div className="mt-4 flex gap-2 text-xs">
-            <a href="/estadisticas" className="bg-slate-900 text-white px-3 py-1.5 rounded-full">📊 Estadísticas</a>
-            <button onClick={fetchAll} className="bg-white border border-slate-200 px-3 py-1.5 rounded-full">↻ Recargar</button>
+            <a href="/estadisticas" className="bg-slate-900 text-white px-3 py-1.5 rounded-full inline-flex items-center gap-1.5"><BarChart3 className="w-4 h-4" /> Estadísticas</a>
+            <button onClick={fetchAll} className="bg-white border border-slate-200 px-3 py-1.5 rounded-full inline-flex items-center gap-1.5"><RefreshCw className="w-4 h-4" /> Recargar</button>
           </div>
         </div>
       )}

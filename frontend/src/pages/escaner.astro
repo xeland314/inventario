@@ -4,7 +4,7 @@ import Escaner from '../components/Escaner';
 ---
 <Layout title="Escáner">
   <main class="max-w-3xl mx-auto p-6 space-y-6">
-    <h1 class="text-2xl font-bold">🔍 Escáner rápido</h1>
+    <h1 class="text-2xl font-bold inline-flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg> Escáner rápido</h1>
     <p class="text-sm text-slate-500">Escanea QR de etiqueta (UUID v4/v7 o ET-XXXX) y abre el dispositivo asociado.</p>
     <div id="escaner-mount"></div>
     <Escaner client:load onDeviceFound={(data) => {

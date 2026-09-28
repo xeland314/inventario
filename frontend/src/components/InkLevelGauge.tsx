@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Save } from 'lucide-react';
 
 interface Tinta {
   id?: string;
@@ -119,7 +120,7 @@ export default function InkLevelGauge({ tintas = [], dispositivoId, editable = f
           disabled={saving}
           className="mt-5 w-full bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white font-semibold py-3 min-h-[44px] rounded-xl transition text-sm touch-manipulation"
         >
-          {saving ? 'Guardando...' : '💾 Guardar niveles'}
+          {saving ? 'Guardando...' : <span className="inline-flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Guardar niveles</span>}
         </button>
       )}
     </div>

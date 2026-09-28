@@ -88,6 +88,7 @@ func main() {
 	planHandler := &handlers.PlanHandler{DB: database}
 	dashHandler := &handlers.DashboardHandler{DB: database}
 	tomaHandler := &handlers.TomaHandler{DB: database}
+	frascoHandler := &handlers.FrascoHandler{DB: database}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -167,9 +168,16 @@ func main() {
 				r.Patch("/mantenimientos/{id}", mantHandler.Actualizar)
 				r.Delete("/mantenimientos/{id}", mantHandler.Eliminar)
 
-				// Tintas escritura
+				// Tintas escritura (nivel en impresora)
 				r.Put("/impresoras/{id}/tintas", tintaHandler.Actualizar)
 				r.Put("/dispositivos/{id}/tintas", tintaHandler.Actualizar)
+
+				// Frascos escritura (stock separado, sin QR)
+				r.Post("/frascos", frascoHandler.Crear)
+				r.Put("/frascos/{id}", frascoHandler.Actualizar)
+				r.Patch("/frascos/{id}", frascoHandler.Actualizar)
+				r.Delete("/frascos/{id}", frascoHandler.Eliminar)
+				r.Post("/frascos/{id}/movimiento", frascoHandler.Movimiento)
 
 				// Evidencia escritura
 				r.Post("/evidencia/upload", evHandler.Upload)
@@ -190,6 +198,11 @@ func main() {
 
 			r.Get("/impresoras/{id}/tintas", tintaHandler.Obtener)
 			r.Get("/dispositivos/{id}/tintas", tintaHandler.Obtener)
+
+			// Frascos lectura (stock)
+			r.Get("/frascos", frascoHandler.Listar)
+			r.Get("/frascos/{id}", frascoHandler.Obtener)
+			r.Get("/frascos/{id}/movimientos", frascoHandler.ListarMovimientos)
 
 			r.Get("/evidencia/galeria", evHandler.Galeria)
 			r.Get("/galeria", evHandler.Galeria)
