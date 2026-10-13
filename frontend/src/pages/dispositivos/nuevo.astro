@@ -1,5 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import Escaner from '../../components/Escaner';
+import FotosCreacion from '../../components/FotosCreacion';
 ---
 
 <Layout title="Nuevo dispositivo">
@@ -12,8 +14,8 @@ import Layout from '../../layouts/Layout.astro';
           <input name="codigo_activo" required placeholder="INV-2026-001" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-600">Número de Serie *</label>
-          <input name="numero_serie" required placeholder="SN123456" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+          <label class="text-xs font-semibold text-slate-600">Número de Serie</label>
+          <input name="numero_serie" placeholder="SN123456 (opcional)" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
         </div>
       </div>
 
@@ -37,6 +39,7 @@ import Layout from '../../layouts/Layout.astro';
             <option>UPS</option>
             <option>Regulador</option>
             <option>Telefono IP</option>
+            <option>Radio Comunicador</option>
             <option>Camara IP</option>
             <option>Disco Externo</option>
             <option>Mouse</option>
@@ -154,13 +157,30 @@ import Layout from '../../layouts/Layout.astro';
       </div>
       <div>
         <label class="text-xs font-semibold text-slate-600">Parent ID (si es componente dentro de otro equipo)</label>
-        <input name="parent_id" placeholder="UUID del equipo padre" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
-        <p class="text-xs text-slate-400 mt-1">Ej: ventilador dentro de GGM-COM-014. Dejar vacío si es equipo independiente.</p>
+        <input name="parent_id" placeholder="UUID del padre, o UUID/ET-XXXX de su etiqueta QR" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
+        <p class="text-xs text-slate-400 mt-1">Acepta el UUID del equipo padre o directamente el QR escaneado de su etiqueta (se resuelve automáticamente). Dejar vacío si es independiente.</p>
       </div>
+
+      <div>
+        <label class="text-xs font-semibold text-slate-600">Etiqueta UUID (opcional — escanea el QR de la etiqueta)</label>
+        <input name="etiqueta_id" placeholder="UUID v4/v7 o ET-XXXX (auto al escanear)" class="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
+        <p class="text-xs text-slate-400 mt-1">Si la etiqueta ya está asignada a otro equipo se mostrará un error; usa una etiqueta disponible.</p>
+      </div>
+
+      <FotosCreacion client:load />
 
       <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-3 rounded-xl transition">Crear dispositivo</button>
       <p id="msg" class="text-sm text-center"></p>
     </form>
+
+    <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5 shadow-sm">
+      <h2 class="font-bold text-slate-900 text-base inline-flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+        Escanear etiqueta en línea
+      </h2>
+      <p class="text-xs text-slate-500 mt-1">Escanea el QR de la etiqueta y se completará automáticamente en el formulario.</p>
+      <Escaner client:load />
+    </div>
   </main>
 
   <script is:inline>
@@ -183,10 +203,12 @@ import Layout from '../../layouts/Layout.astro';
         sede: fd.get('sede') || null,
         tipo_componente: fd.get('tipo_componente') || null,
         parent_id: fd.get('parent_id') || null,
+        etiqueta_id: fd.get('etiqueta_id')?.toString().trim() || null,
       };
       if (!payload.tipo_componente) delete payload.tipo_componente;
       if (!payload.parent_id) delete payload.parent_id;
       if (!payload.sede) delete payload.sede;
+      if (!payload.etiqueta_id) delete payload.etiqueta_id;
       const msg = document.getElementById('msg');
       msg.textContent = 'Guardando...';
       msg.className = 'text-sm text-slate-500 text-center';
@@ -200,9 +222,29 @@ import Layout from '../../layouts/Layout.astro';
         errorText = await res.text();
       }
       if (res.ok) {
-        msg.textContent = '✓ Creado correctamente. Redirigiendo...';
-        msg.className = 'text-sm text-emerald-600 text-center';
-        setTimeout(() => location.href = `/dispositivos/${data.id}`, 600);
+        const nuevoId = data.id;
+        const fotos = (window.__fotosCreacion || []);
+        let advertencia = '';
+        if (fotos.length) {
+          msg.textContent = '✓ Creado. Subiendo ' + fotos.length + ' foto(s)...';
+          msg.className = 'text-sm text-slate-500 text-center';
+          try {
+            for (const blob of fotos) {
+              const fform = new FormData();
+              fform.append('entidad_tipo', 'dispositivo');
+              fform.append('entidad_id', nuevoId);
+              fform.append('fotos', new File([blob], 'captura_' + Date.now() + '.jpg', { type: 'image/jpeg' }));
+              const fr = await fetch('/api/evidencia/upload', { method: 'POST', body: fform });
+              if (!fr.ok) advertencia = await fr.text();
+            }
+          } catch (fe) {
+            advertencia = 'Fallo de red al subir fotos: ' + fe.message;
+          }
+        }
+        msg.textContent = '✓ Creado correctamente' + (fotos.length ? ' con ' + fotos.length + ' foto(s)' : '') + (advertencia ? ' (advertencia: ' + advertencia + ')' : '') + '. Redirigiendo...';
+        msg.className = advertencia ? 'text-sm text-amber-600 text-center' : 'text-sm text-emerald-600 text-center';
+        window.__fotosCreacion = [];
+        setTimeout(() => location.href = `/dispositivos/${nuevoId}`, advertencia ? 2500 : 600);
       } else {
         if (res.status === 409 && errorText.includes('UNIQUE')) {
           errorText = `El código "${payload.codigo_activo}" ya existe (CO1431MT042300119 es un Parlante registrado). Usa un código único o edita el existente.`;
@@ -211,6 +253,16 @@ import Layout from '../../layouts/Layout.astro';
         }
         msg.textContent = 'Error: ' + errorText;
         msg.className = 'text-sm text-rose-600 text-center whitespace-pre-wrap';
+      }
+    });
+
+    // Escáner integrado: rellena el campo etiqueta_id al escanear
+    window.addEventListener('escaner:scan', (e) => {
+      const input = document.querySelector('input[name="etiqueta_id"]');
+      if (input && e.detail?.uuid) {
+        input.value = e.detail.uuid;
+        input.classList.add('border-emerald-400', 'ring-1', 'ring-emerald-300');
+        setTimeout(() => input.classList.remove('border-emerald-400', 'ring-1', 'ring-emerald-300'), 2500);
       }
     });
   </script>

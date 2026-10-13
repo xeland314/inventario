@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import EncryptedGallery from './EncryptedGallery';
 import InkLevelGauge from './InkLevelGauge';
+import Escaner from './Escaner';
 import {
   AlertTriangle,
   Building2,
@@ -38,6 +39,8 @@ export default function DispositivoDetail({ id: propId }) {
   const [editingDisp, setEditingDisp] = useState(false);
   const [savingDisp, setSavingDisp] = useState(false);
   const [movimientos, setMovimientos] = useState([]);
+  const [showEscaner, setShowEscaner] = useState(false);
+  const etiquetaInputRef = useRef<HTMLInputElement>(null);
 
   const fetchAll = () => {
     setLoading(true);
@@ -329,8 +332,8 @@ export default function DispositivoDetail({ id: propId }) {
               <input name="codigo_activo" defaultValue={dispositivo.codigo_activo} required className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-slate-600">Número Serie *</label>
-              <input name="numero_serie" defaultValue={dispositivo.numero_serie} required className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
+              <label className="text-xs font-semibold text-slate-600">Número Serie</label>
+              <input name="numero_serie" defaultValue={dispositivo.numero_serie} placeholder="(opcional)" className="w-full mt-1 border border-slate-200 rounded-lg px-3 py-2 text-sm" />
             </div>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
@@ -353,6 +356,7 @@ export default function DispositivoDetail({ id: propId }) {
                 <option>UPS</option>
                 <option>Regulador</option>
                 <option>Telefono IP</option>
+                <option>Radio Comunicador</option>
                 <option>Camara IP</option>
                 <option>Disco Externo</option>
                 <option>Mouse</option>
@@ -529,14 +533,26 @@ export default function DispositivoDetail({ id: propId }) {
               }}
               className="flex gap-2"
             >
-              <input name="etiqueta_id" placeholder="UUID v4/v7 o ET-XXXX escaneado" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
+              <input ref={etiquetaInputRef} name="etiqueta_id" placeholder="UUID v4/v7 o ET-XXXX escaneado" className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm font-mono" />
               <button type="submit" className="bg-sky-600 text-white px-5 py-2 rounded-full text-sm hover:bg-sky-500">
                 Asociar
               </button>
             </form>
-            <a href="/escaner" className="text-xs text-sky-600 underline">
-              Abrir escáner →
-            </a>
+            <button
+              type="button"
+              onClick={() => setShowEscaner((v) => !v)}
+              className="w-fit text-xs bg-slate-900 text-white px-4 py-2 min-h-[36px] rounded-full inline-flex items-center gap-1.5"
+            >
+              📷 {showEscaner ? 'Ocultar escáner' : 'Escanear QR aquí'}
+            </button>
+            {showEscaner && (
+              <Escaner
+                onScan={(uuid) => {
+                  if (etiquetaInputRef.current) etiquetaInputRef.current.value = uuid;
+                  setShowEscaner(false);
+                }}
+              />
+            )}
           </div>
         )}
       </section>

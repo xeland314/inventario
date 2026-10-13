@@ -17,7 +17,7 @@ var TiposValidos = map[string]bool{
 	"Desktop": true, "Laptop": true, "Servidor": true, "Tablet": true, "Monitor": true,
 	"Proyector": true, "Impresora": true, "Scanner": true, "Router": true, "Switch": true,
 	"Access Point": true, "Firewall": true, "NAS": true, "UPS": true, "Regulador": true,
-	"Telefono IP": true, "Camara IP": true, "Disco Externo": true, "Otro": true,
+	"Telefono IP": true, "Camara IP": true, "Radio Comunicador": true, "Disco Externo": true, "Otro": true,
 	// Componentes también válidos como item independiente (cables, discos...)
 	"Ventilador": true, "SSD": true, "HDD": true, "NVMe": true, "RAM": true, "Bateria": true,
 	"Fuente": true, "Placa": true, "CPU": true, "GPU": true, "Teclado": true,

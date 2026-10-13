@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -202,7 +203,13 @@ func (h *DispositivoHandler) validarParent(dispositivoID string, parentID *strin
 	}
 	var exists string
 	if err := h.DB.QueryRow(`SELECT id FROM dispositivos WHERE id = ?`, *parentID).Scan(&exists); err == sql.ErrNoRows {
-		return sql.ErrNoRows
+		// permitir parent referenciado por etiqueta QR (UUID de etiqueta o ET-XXXX)
+		var dispID string
+		if err2 := h.DB.QueryRow(`SELECT dispositivo_id FROM etiquetas WHERE (id = ? OR codigo_barras = ?) AND dispositivo_id IS NOT NULL`, *parentID, strings.ToUpper(*parentID)).Scan(&dispID); err2 == nil {
+			*parentID = dispID
+		} else {
+			return sql.ErrNoRows
+		}
 	} else if err != nil {
 		return err
 	}
@@ -245,12 +252,13 @@ func (h *DispositivoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 		ParentID         *string `json:"parent_id"`
 		TipoComponente   *string `json:"tipo_componente"`
 		Sede             *string `json:"sede"`
+		EtiquetaID       *string `json:"etiqueta_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "JSON inválido: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.CodigoActivo == "" || req.NumeroSerie == "" || req.Tipo == "" || req.Marca == "" || req.Modelo == "" {
+	if req.CodigoActivo == "" || req.Tipo == "" || req.Marca == "" || req.Modelo == "" {
 		http.Error(w, "Faltan campos obligatorios", http.StatusBadRequest)
 		return
 	}
@@ -315,6 +323,32 @@ func (h *DispositivoHandler) Crear(w http.ResponseWriter, r *http.Request) {
 			h.DB.Exec(`INSERT OR IGNORE INTO niveles_tinta (id, dispositivo_id, color, nivel_porcentaje, ultima_actualizacion) VALUES (?, ?, ?, ?, ?)`,
 				tintaID, id, color, 100, creadoEn)
 		}
+	}
+	// Asociar etiqueta escaneada si se envió (atomico con la creación)
+	if req.EtiquetaID != nil && *req.EtiquetaID != "" {
+		etiID := strings.TrimSpace(*req.EtiquetaID)
+		var etEstado string
+		if err := h.DB.QueryRow(`SELECT estado FROM etiquetas WHERE id = ? OR codigo_barras = ?`, etiID, strings.ToUpper(etiID)).Scan(&etEstado); err == sql.ErrNoRows {
+			http.Error(w, "Etiqueta no encontrada", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if etEstado == "asignado" {
+			http.Error(w, "La etiqueta ya está asignada a otro dispositivo", http.StatusConflict)
+			return
+		}
+		if etEstado == "anulado" {
+			http.Error(w, "La etiqueta está anulada", http.StatusBadRequest)
+			return
+		}
+		_, err = h.DB.Exec(`UPDATE etiquetas SET dispositivo_id = ?, estado = 'asignado', asignado_en = ? WHERE id = ?`, id, creadoEn, etiID)
+		if err != nil {
+			http.Error(w, "Error al asociar etiqueta: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		RegistrarAuditoria(h.DB, r, "etiqueta", etiID, "asociar", "dispositivo_id", "", id)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

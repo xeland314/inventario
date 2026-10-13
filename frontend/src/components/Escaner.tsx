@@ -63,6 +63,7 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
     setLastResult(uuid);
     setScannedDevice(null);
     if (navigator.vibrate) navigator.vibrate(120);
+    window.dispatchEvent(new CustomEvent('escaner:scan', { detail: { uuid } }));
     await stopScan();
     if (onScan) onScan(uuid);
     try {
