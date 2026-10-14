@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -19,6 +20,13 @@ type EvidenciaHandler struct {
 	DB            *sql.DB
 	MasterKey     []byte
 	StorageFolder string
+}
+
+// resolvePath normaliza rutas heredadas de Windows (\) o relativas
+// al storage actual, para que las fotos viejas funcionen en Linux.
+func (h *EvidenciaHandler) resolvePath(stored string) string {
+	cleaned := strings.ReplaceAll(stored, "\\", "/")
+	return filepath.Join(h.StorageFolder, filepath.Base(cleaned))
 }
 
 func (h *EvidenciaHandler) Upload(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +109,7 @@ func (h *EvidenciaHandler) ServirRaw(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	cipherText, err := os.ReadFile(filePath)
+	cipherText, err := os.ReadFile(h.resolvePath(filePath))
 	if err != nil {
 		http.Error(w, "Error al leer disco: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -162,7 +170,7 @@ func (h *EvidenciaHandler) Eliminar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Foto no encontrada", http.StatusNotFound)
 		return
 	}
-	os.Remove(filePath)
+	os.Remove(h.resolvePath(filePath))
 	h.DB.Exec(`DELETE FROM fotos_evidencia WHERE id = ?`, fotoID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Foto eliminada"})
