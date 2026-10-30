@@ -13,7 +13,7 @@
   "dependencies": {
     "@astrojs/node": "^11.1.5",
     "@astrojs/react": "^3.6.2",
-    "astro": "^7.3.2",
+    "astro": "^7.4.4",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.47.0",
     "pdf-lib": "^1.17.1",
