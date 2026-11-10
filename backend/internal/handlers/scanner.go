@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"inventario-backend/internal/scanner"
 
@@ -23,6 +24,8 @@ var upgrader = websocket.Upgrader{
 type ScannerHandler struct {
 	DB  *sql.DB
 	Hub *scanner.Hub
+	// Auth valida el token enviado como primer mensaje del WebSocket.
+	Auth *AuthHandler
 }
 
 // DeviceInfo retorna información del hardware Symbol USB conectado.
@@ -162,6 +165,21 @@ func (h *ScannerHandler) WebSocketEndpoint(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return
 	}
+
+	// Autenticación por primer mensaje {"type":"auth","token":"..."}: el token no
+	// viaja en la URL (queda fuera de logs/historial). Sin auth válida en 5s se cierra.
+	conn.SetReadLimit(4096)
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	var first struct {
+		Type  string `json:"type"`
+		Token string `json:"token"`
+	}
+	if err := conn.ReadJSON(&first); err != nil || first.Type != "auth" || h.Auth == nil || !h.Auth.ValidToken(first.Token) {
+		_ = conn.WriteJSON(map[string]string{"type": "error", "error": "no autenticado"})
+		conn.Close()
+		return
+	}
+	_ = conn.SetReadDeadline(time.Time{})
 
 	h.Hub.RegisterClient(conn)
 	defer h.Hub.UnregisterClient(conn)

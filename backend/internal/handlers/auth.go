@@ -49,6 +49,16 @@ var usernameRe = regexp.MustCompile(`^[a-zA-Z0-9._-]{3,32}$`)
 func isValidUsername(u string) bool { return usernameRe.MatchString(u) }
 
 // Middleware verifica Authorization: Bearer <token> o X-Auth-Token
+// ValidToken indica si el token corresponde a una sesión de un usuario activo.
+func (h *AuthHandler) ValidToken(token string) bool {
+	if token == "" {
+		return false
+	}
+	var activo int
+	err := h.DB.QueryRow(`SELECT u.activo FROM sesiones s JOIN usuarios u ON s.user_id = u.id WHERE s.token = ?`, token).Scan(&activo)
+	return err == nil && activo == 1
+}
+
 func (h *AuthHandler) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := ""

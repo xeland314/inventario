@@ -68,6 +68,7 @@ Rol: GET lector+tecnico; escritura solo tecnico (auditoría entidad `conjunto`).
 > Para tomas físicas, frascos, planes de mantenimiento, dashboard y auditoría ver `docs/planes/01..05-*.md` y `docs/02-componentes-movimientos.md`.
 
 ## Escáner Symbol USB (05e0:1200) & Códigos de Barras
+> Auth: todo requiere `Authorization: Bearer <token>` salvo `/api/barcode/*`. El WebSocket se autentica con el primer mensaje `{"type":"auth","token":"..."}` (5 s; si falla recibe `{type:"error"}` y se cierra). No se acepta token en la URL.
 - `GET /api/scanner/device` (alias `/api/device`) → información técnica de hardware del lector USB (`connected`, `vendor_id`, `product_id`, `product_name`, `device_node`, `is_readable`, `evdev_active`, `web_wedge_active`)
 - `POST /api/scanner/scan` (alias `/api/scan`) `{code, duration_ms?, source?}` → procesa escaneo con deduplicación (<400ms), enriquece con coincidencia en base de datos y difunde evento a clientes WebSocket
 - `GET /api/scanner/scans` (alias `/api/scans`) → historial de escaneos de la sesión en memoria

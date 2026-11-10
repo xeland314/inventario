@@ -156,7 +156,8 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
         wsRef.current = ws;
 
         ws.onopen = () => {
-          setWsConnected(true);
+          // Autenticación por primer mensaje (no por URL)
+          ws.send(JSON.stringify({ type: 'auth', token: localStorage.getItem('token') || '' }));
         };
 
         ws.onmessage = (event) => {
@@ -169,6 +170,7 @@ export default function Escaner({ onScan, onDeviceFound }: EscanerProps): React.
               setScans([]);
               setLatestScan(null);
             } else if (msg.type === 'init' && msg.device) {
+              setWsConnected(true);
               setHardwareInfo(msg.device);
               if (msg.scans && Array.isArray(msg.scans)) {
                 setScans(msg.scans);

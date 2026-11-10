@@ -128,7 +128,7 @@ func main() {
 	// Escáner Symbol USB & WebSocket Hub
 	scannerHub := scanner.NewHub(database)
 	defer scannerHub.Close()
-	scannerHandler := &handlers.ScannerHandler{DB: database, Hub: scannerHub}
+	scannerHandler := &handlers.ScannerHandler{DB: database, Hub: scannerHub, Auth: authHandler}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -159,18 +159,9 @@ func main() {
 		r.Post("/auth/register", authHandler.Register)
 		r.Post("/auth/login", authHandler.Login)
 
-		// Escáner Symbol USB & Códigos de Barras
-		r.Get("/scanner/device", scannerHandler.DeviceInfo)
-		r.Get("/device", scannerHandler.DeviceInfo)
-		r.Post("/scanner/scan", scannerHandler.RecordScan)
-		r.Post("/scan", scannerHandler.RecordScan)
-		r.Get("/scanner/scans", scannerHandler.ListScans)
-		r.Get("/scans", scannerHandler.ListScans)
-		r.Delete("/scanner/scans", scannerHandler.ClearScans)
-		r.Delete("/scans", scannerHandler.ClearScans)
-		r.Get("/scanner/catalog", scannerHandler.Catalog)
-		r.Get("/catalog", scannerHandler.Catalog)
-		r.Get("/scanner/lookup/{code}", scannerHandler.Lookup)
+		// Escáner: solo la generación de códigos de barras es pública (función pura del
+		// texto recibido, usada por <img>, que no puede enviar cabeceras). El WebSocket se
+		// autentica con un primer mensaje {"type":"auth","token":...}, no por URL.
 		r.Get("/barcode/{format}/{code}", scannerHandler.BarcodePNG)
 		r.Get("/barcode/{format}/{code}.png", scannerHandler.BarcodePNG)
 		r.Get("/barcode/{format}/{code}.svg", scannerHandler.BarcodeSVG)
@@ -271,6 +262,19 @@ func main() {
 			r.Get("/frascos", frascoHandler.Listar)
 			r.Get("/frascos/{id}", frascoHandler.Obtener)
 			r.Get("/frascos/{id}/movimientos", frascoHandler.ListarMovimientos)
+
+			// Escáner Symbol USB (requiere token)
+			r.Get("/scanner/device", scannerHandler.DeviceInfo)
+			r.Get("/device", scannerHandler.DeviceInfo)
+			r.Post("/scanner/scan", scannerHandler.RecordScan)
+			r.Post("/scan", scannerHandler.RecordScan)
+			r.Get("/scanner/scans", scannerHandler.ListScans)
+			r.Get("/scans", scannerHandler.ListScans)
+			r.Delete("/scanner/scans", scannerHandler.ClearScans)
+			r.Delete("/scans", scannerHandler.ClearScans)
+			r.Get("/scanner/catalog", scannerHandler.Catalog)
+			r.Get("/catalog", scannerHandler.Catalog)
+			r.Get("/scanner/lookup/{code}", scannerHandler.Lookup)
 
 			// Conjuntos lectura (stock por caja, con QR)
 			r.Get("/conjuntos", conjuntoHandler.Listar)
