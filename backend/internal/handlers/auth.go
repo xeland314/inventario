@@ -67,9 +67,6 @@ func (h *AuthHandler) Middleware(next http.Handler) http.Handler {
 			token = strings.TrimSpace(auth[7:])
 		} else {
 			token = r.Header.Get("X-Auth-Token")
-			if token == "" {
-				token = r.URL.Query().Get("token")
-			}
 		}
 		if token == "" {
 			http.Error(w, `{"error":"no autenticado"}`, http.StatusUnauthorized)

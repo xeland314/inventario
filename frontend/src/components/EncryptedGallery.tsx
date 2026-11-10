@@ -43,7 +43,9 @@ export default function EncryptedGallery({ entidadTipo, entidadId, compact = fal
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+  // Las <img> no pueden enviar Authorization: se descargan con fetch (Bearer) y se muestran como blob: URL
+  const [blobUrls, setBlobUrls] = useState<Record<string, string>>({});
+  const blobUrlsRef = useRef<Record<string, string>>({});
 
   const fetchGaleria = (): void => {
     fetch(`/api/evidencia/galeria?tipo=${entidadTipo}&id=${entidadId}`)
@@ -74,8 +76,40 @@ export default function EncryptedGallery({ entidadTipo, entidadId, compact = fal
   }, [cameraOn]);
 
   const previewFoto = previewIndex !== null ? fotos[previewIndex] : null;
-  const rawUrl = (fotoId: string): string =>
-    token ? `/api/evidencia/${fotoId}/raw?token=${encodeURIComponent(token)}` : `/api/evidencia/${fotoId}/raw`;
+  const rawUrl = (fotoId: string): string | undefined => blobUrls[fotoId];
+
+  useEffect(() => {
+    let cancelled = false;
+    fotos.forEach((f) => {
+      if (blobUrlsRef.current[f.id]) return;
+      blobUrlsRef.current[f.id] = ''; // marca "en curso" para no duplicar la descarga
+      fetch(`/api/evidencia/${f.id}/raw`)
+        .then((res) => (res.ok ? res.blob() : Promise.reject(new Error(String(res.status)))))
+        .then((blob) => {
+          const url = URL.createObjectURL(blob);
+          if (cancelled) {
+            URL.revokeObjectURL(url);
+            delete blobUrlsRef.current[f.id];
+            return;
+          }
+          blobUrlsRef.current[f.id] = url;
+          setBlobUrls((prev) => ({ ...prev, [f.id]: url }));
+        })
+        .catch(() => {
+          delete blobUrlsRef.current[f.id];
+        });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [fotos]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(blobUrlsRef.current).forEach((u) => u && URL.revokeObjectURL(u));
+      blobUrlsRef.current = {};
+    };
+  }, []);
 
   const openPreview = (idx: number): void => setPreviewIndex(idx);
   const closePreview = (): void => setPreviewIndex(null);

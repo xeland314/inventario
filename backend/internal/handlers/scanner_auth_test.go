@@ -71,6 +71,12 @@ func TestScannerRoutesRequireAuth(t *testing.T) {
 			t.Errorf("%s %s con token: esperaba 200, obtuve %d", c.method, c.path, res.StatusCode)
 		}
 	}
+	// El token por query string ya no se acepta
+	res0, _ := http.Get(srv.URL + "/api/scanner/lookup/abc?token=tok-valido")
+	res0.Body.Close()
+	if res0.StatusCode != http.StatusUnauthorized {
+		t.Errorf("?token= debe rechazarse, obtuve %d", res0.StatusCode)
+	}
 	res, _ := http.Get(srv.URL + "/api/barcode/code128/ABC123.svg")
 	res.Body.Close()
 	if res.StatusCode != http.StatusOK {
