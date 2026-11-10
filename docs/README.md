@@ -14,12 +14,13 @@ Este directorio documenta los **avances técnicos y de usabilidad** implementado
 6. [Usabilidad](./USABILIDAD.md) — flujos para usuario final por rol
 7. [Migración](./MIGRACION.md) — estrategia sin pérdida de datos en BD grande
 8. [Tests](./TESTS.md) — cobertura y cómo ejecutar
+9. [Planes `planes/`](./planes/) — especificaciones `01`–`06`; el último: [Conjuntos por caja + conteo IA local](./planes/06-conjuntos-conteo-ia.md) (stock a granel con QR del pool + OWL-ViT en navegador / VLM Ollama como proxy)
 
 ## Stack relevante
 
 - Backend `backend/main.go:27` sirve API + frontend `frontend/dist` en `:8080`
-- DB `backend/internal/db/schema.go:8` 6 tablas + índices
-- Frontend `frontend/src/layouts/Layout.astro:17` nav central
+- DB `backend/internal/db/schema.go:8` 18 tablas + índices y migraciones idempotentes
+- Frontend `frontend/src/layouts/Layout.astro:17` nav central (incluye Conjuntos)
 
 ## Cómo probar rápido
 

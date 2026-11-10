@@ -17,6 +17,7 @@ import (
 
 	dbpkg "inventario-backend/internal/db"
 	"inventario-backend/internal/handlers"
+	"inventario-backend/internal/scanner"
 )
 
 func getEnv(key, fallback string) string {
@@ -51,8 +52,33 @@ func seedDefaultAdmin(db *sql.DB) {
 
 func main() {
 	// --- Config ---
-	dbPath := getEnv("DB_PATH", "./inventario.db")
-	storageFolder := getEnv("STORAGE_PATH", "./encrypted_storage")
+	dbPath := getEnv("DB_PATH", "")
+	if dbPath == "" {
+		candidates := []string{"./backend/inventario.db", "../backend/inventario.db", "./inventario.db"}
+		for _, c := range candidates {
+			if st, err := os.Stat(c); err == nil && st.Size() > 0 {
+				dbPath = c
+				break
+			}
+		}
+		if dbPath == "" {
+			dbPath = "./inventario.db"
+		}
+	}
+
+	storageFolder := getEnv("STORAGE_PATH", "")
+	if storageFolder == "" {
+		candidates := []string{"./backend/encrypted_storage", "../backend/encrypted_storage", "./encrypted_storage"}
+		for _, c := range candidates {
+			if st, err := os.Stat(c); err == nil && st.IsDir() {
+				storageFolder = c
+				break
+			}
+		}
+		if storageFolder == "" {
+			storageFolder = "./encrypted_storage"
+		}
+	}
 	encryptionKey := getEnv("ENCRYPTION_KEY", "0123456789abcdef0123456789abcdef") // 32 bytes
 	port := getEnv("PORT", "8080")
 
@@ -89,6 +115,20 @@ func main() {
 	dashHandler := &handlers.DashboardHandler{DB: database}
 	tomaHandler := &handlers.TomaHandler{DB: database}
 	frascoHandler := &handlers.FrascoHandler{DB: database}
+	conjuntoHandler := &handlers.ConjuntoHandler{DB: database}
+	iaHandler := &handlers.IAHandler{
+		DB:            database,
+		MasterKey:     []byte(encryptionKey),
+		StorageFolder: storageFolder,
+		VLMURL:        getEnv("VLM_URL", ""),
+		VLMModel:     getEnv("VLM_MODEL", ""),
+		VLMType:       getEnv("VLM_TYPE", "ollama"),
+	}
+
+	// Escáner Symbol USB & WebSocket Hub
+	scannerHub := scanner.NewHub(database)
+	defer scannerHub.Close()
+	scannerHandler := &handlers.ScannerHandler{DB: database, Hub: scannerHub}
 
 	// --- Router ---
 	r := chi.NewRouter()
@@ -110,11 +150,31 @@ func main() {
 		w.Write([]byte(`{"status":"ok","service":"inventario-backend"}`))
 	})
 
+	// WebSocket raíz (compatibilidad directa)
+	r.HandleFunc("/ws", scannerHandler.WebSocketEndpoint)
+
 	// API
 	r.Route("/api", func(r chi.Router) {
 		// Públicos
 		r.Post("/auth/register", authHandler.Register)
 		r.Post("/auth/login", authHandler.Login)
+
+		// Escáner Symbol USB & Códigos de Barras
+		r.Get("/scanner/device", scannerHandler.DeviceInfo)
+		r.Get("/device", scannerHandler.DeviceInfo)
+		r.Post("/scanner/scan", scannerHandler.RecordScan)
+		r.Post("/scan", scannerHandler.RecordScan)
+		r.Get("/scanner/scans", scannerHandler.ListScans)
+		r.Get("/scans", scannerHandler.ListScans)
+		r.Delete("/scanner/scans", scannerHandler.ClearScans)
+		r.Delete("/scans", scannerHandler.ClearScans)
+		r.Get("/scanner/catalog", scannerHandler.Catalog)
+		r.Get("/catalog", scannerHandler.Catalog)
+		r.Get("/scanner/lookup/{code}", scannerHandler.Lookup)
+		r.Get("/barcode/{format}/{code}", scannerHandler.BarcodePNG)
+		r.Get("/barcode/{format}/{code}.png", scannerHandler.BarcodePNG)
+		r.Get("/barcode/{format}/{code}.svg", scannerHandler.BarcodeSVG)
+		r.HandleFunc("/ws", scannerHandler.WebSocketEndpoint)
 
 		// Protegidos — requieren token
 		r.Group(func(r chi.Router) {
@@ -179,6 +239,14 @@ func main() {
 				r.Delete("/frascos/{id}", frascoHandler.Eliminar)
 				r.Post("/frascos/{id}/movimiento", frascoHandler.Movimiento)
 
+				// Conjuntos escritura (stock por caja con QR del pool)
+				r.Post("/conjuntos", conjuntoHandler.Crear)
+				r.Put("/conjuntos/{id}", conjuntoHandler.Actualizar)
+				r.Patch("/conjuntos/{id}", conjuntoHandler.Actualizar)
+				r.Delete("/conjuntos/{id}", conjuntoHandler.Eliminar)
+				r.Post("/conjuntos/{id}/movimiento", conjuntoHandler.Movimiento)
+				r.Post("/conjuntos/{id}/conteos", conjuntoHandler.CrearConteo)
+
 				// Evidencia escritura
 				r.Post("/evidencia/upload", evHandler.Upload)
 				r.Delete("/evidencia/{id}", evHandler.Eliminar)
@@ -203,6 +271,16 @@ func main() {
 			r.Get("/frascos", frascoHandler.Listar)
 			r.Get("/frascos/{id}", frascoHandler.Obtener)
 			r.Get("/frascos/{id}/movimientos", frascoHandler.ListarMovimientos)
+
+			// Conjuntos lectura (stock por caja, con QR)
+			r.Get("/conjuntos", conjuntoHandler.Listar)
+			r.Get("/conjuntos/{id}", conjuntoHandler.Obtener)
+			r.Get("/conjuntos/{id}/movimientos", conjuntoHandler.ListarMovimientos)
+			r.Get("/conjuntos/{id}/conteos", conjuntoHandler.ListarConteos)
+
+			// IA local: config (navegador + VLM proxy)
+			r.Get("/ia/config", iaHandler.Config)
+			r.Post("/ia/identificar", iaHandler.Identificar)
 
 			r.Get("/evidencia/galeria", evHandler.Galeria)
 			r.Get("/galeria", evHandler.Galeria)

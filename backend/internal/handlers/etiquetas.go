@@ -129,7 +129,7 @@ func (h *EtiquetaHandler) Listar(w http.ResponseWriter, r *http.Request) {
 	if disponibleOnly == "true" {
 		estado = "disponible"
 	}
-	query := `SELECT id, version, estado, dispositivo_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE 1=1`
+	query := `SELECT id, version, estado, dispositivo_id, conjunto_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE 1=1`
 	args := []interface{}{}
 	if estado != "" {
 		if !models.EsEstadoEtiquetaValido(estado) {
@@ -163,7 +163,7 @@ func (h *EtiquetaHandler) Listar(w http.ResponseWriter, r *http.Request) {
 	var list []models.Etiqueta
 	for rows.Next() {
 		var e models.Etiqueta
-		rows.Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
+		rows.Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.ConjuntoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
 		list = append(list, e)
 	}
 	if list == nil {
@@ -176,7 +176,7 @@ func (h *EtiquetaHandler) Listar(w http.ResponseWriter, r *http.Request) {
 func (h *EtiquetaHandler) Obtener(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var e models.Etiqueta
-	err := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE id = ?`, id).Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
+	err := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, conjunto_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE id = ?`, id).Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.ConjuntoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
 	if err == sql.ErrNoRows {
 		http.Error(w, "Etiqueta no encontrada", http.StatusNotFound)
 		return
@@ -185,7 +185,7 @@ func (h *EtiquetaHandler) Obtener(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// Si está asignada, adjuntar info dispositivo
+	// Si está asignada, adjuntar info dispositivo y/o conjunto
 	var dispositivo *models.Dispositivo
 	if e.DispositivoID != nil {
 		var d models.Dispositivo
@@ -195,28 +195,51 @@ func (h *EtiquetaHandler) Obtener(w http.ResponseWriter, r *http.Request) {
 			dispositivo = &d
 		}
 	}
+	var conjunto map[string]interface{}
+	if e.ConjuntoID != nil {
+		var cID, codigo, nombre, unidad string
+		var categoria, ubicacion sql.NullString
+		var cant, cantMin int
+		err := h.DB.QueryRow(`SELECT id, codigo, nombre, categoria, unidad, cantidad_actual, cantidad_minima, ubicacion FROM conjuntos WHERE id = ?`, *e.ConjuntoID).
+			Scan(&cID, &codigo, &nombre, &categoria, &unidad, &cant, &cantMin, &ubicacion)
+		if err == nil {
+			conjunto = map[string]interface{}{
+				"id": cID, "codigo": codigo, "nombre": nombre, "unidad": unidad,
+				"cantidad_actual": cant, "cantidad_minima": cantMin,
+			}
+			if categoria.Valid {
+				conjunto["categoria"] = categoria.String
+			}
+			if ubicacion.Valid {
+				conjunto["ubicacion"] = ubicacion.String
+			}
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": dispositivo})
+	json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": dispositivo, "conjunto": conjunto})
 }
 
-// POST /api/etiquetas/{id}/asociar {dispositivo_id}
+// POST /api/etiquetas/{id}/asociar {dispositivo_id} o {conjunto_id}
 func (h *EtiquetaHandler) Asociar(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var req struct {
 		DispositivoID string `json:"dispositivo_id"`
+		ConjuntoID    string `json:"conjunto_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "JSON inválido: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	if req.DispositivoID == "" {
-		http.Error(w, "dispositivo_id requerido", http.StatusBadRequest)
+	req.DispositivoID = strings.TrimSpace(req.DispositivoID)
+	req.ConjuntoID = strings.TrimSpace(req.ConjuntoID)
+	if (req.DispositivoID == "" && req.ConjuntoID == "") || (req.DispositivoID != "" && req.ConjuntoID != "") {
+		http.Error(w, "debe enviar dispositivo_id O conjunto_id (exclusivos)", http.StatusBadRequest)
 		return
 	}
-	// verificar etiqueta existe y está disponible/impreso
-	var estado string
-	var dispActual *string
-	if err := h.DB.QueryRow(`SELECT estado, dispositivo_id FROM etiquetas WHERE id = ?`, id).Scan(&estado, &dispActual); err == sql.ErrNoRows {
+	// verificar etiqueta existe y está disponible/impreso (por UUID o ET-XXXX)
+	var etiID, estado string
+	var dispActual, conjActual sql.NullString
+	if err := h.DB.QueryRow(`SELECT id, estado, dispositivo_id, conjunto_id FROM etiquetas WHERE id = ? OR codigo_barras = ?`, id, strings.ToUpper(id)).Scan(&etiID, &estado, &dispActual, &conjActual); err == sql.ErrNoRows {
 		http.Error(w, "Etiqueta no encontrada", http.StatusNotFound)
 		return
 	} else if err != nil {
@@ -227,11 +250,37 @@ func (h *EtiquetaHandler) Asociar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Etiqueta anulada no se puede asociar", http.StatusBadRequest)
 		return
 	}
-	if estado == "asignado" {
+	if estado == "asignado" || dispActual.Valid || conjActual.Valid {
 		http.Error(w, "Etiqueta ya asignada", http.StatusConflict)
 		return
 	}
-	// verificar dispositivo existe y no tiene otra etiqueta
+	now := time.Now().Format(time.RFC3339)
+	if req.ConjuntoID != "" {
+		// asociar a conjunto (caja con stock a granel)
+		var conjExiste string
+		if err := h.DB.QueryRow(`SELECT id FROM conjuntos WHERE id = ? OR codigo = ?`, req.ConjuntoID, strings.ToUpper(req.ConjuntoID)).Scan(&conjExiste); err == sql.ErrNoRows {
+			http.Error(w, "Conjunto no encontrado", http.StatusNotFound)
+			return
+		} else if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var otra string
+		if err := h.DB.QueryRow(`SELECT id FROM etiquetas WHERE conjunto_id = ?`, conjExiste).Scan(&otra); err == nil {
+			http.Error(w, "El conjunto ya tiene etiqueta asociada: "+otra, http.StatusConflict)
+			return
+		}
+		_, err := h.DB.Exec(`UPDATE etiquetas SET conjunto_id = ?, estado = 'asignado', asignado_en = ? WHERE id = ?`, conjExiste, now, etiID)
+		if err != nil {
+			http.Error(w, "Error al asociar: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		RegistrarAuditoria(h.DB, r, "etiqueta", etiID, "asociar", "conjunto_id", "", conjExiste)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta asociada a conjunto", "etiqueta_id": etiID, "conjunto_id": conjExiste})
+		return
+	}
+	// asociar a dispositivo (flujo original)
 	var exists string
 	if err := h.DB.QueryRow(`SELECT id FROM dispositivos WHERE id = ?`, req.DispositivoID).Scan(&exists); err == sql.ErrNoRows {
 		http.Error(w, "Dispositivo no encontrado", http.StatusNotFound)
@@ -242,15 +291,14 @@ func (h *EtiquetaHandler) Asociar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Dispositivo ya tiene etiqueta asociada: "+otra, http.StatusConflict)
 		return
 	}
-	now := time.Now().Format(time.RFC3339)
-	_, err := h.DB.Exec(`UPDATE etiquetas SET dispositivo_id = ?, estado = 'asignado', asignado_en = ? WHERE id = ?`, req.DispositivoID, now, id)
+	_, err := h.DB.Exec(`UPDATE etiquetas SET dispositivo_id = ?, estado = 'asignado', asignado_en = ? WHERE id = ?`, req.DispositivoID, now, etiID)
 	if err != nil {
 		http.Error(w, "Error al asociar: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	RegistrarAuditoria(h.DB, r, "etiqueta", id, "asociar", "dispositivo_id", "", req.DispositivoID)
+	RegistrarAuditoria(h.DB, r, "etiqueta", etiID, "asociar", "dispositivo_id", "", req.DispositivoID)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta asociada", "etiqueta_id": id, "dispositivo_id": req.DispositivoID})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Etiqueta asociada", "etiqueta_id": etiID, "dispositivo_id": req.DispositivoID})
 }
 
 func (h *EtiquetaHandler) Desasociar(w http.ResponseWriter, r *http.Request) {
@@ -267,7 +315,7 @@ func (h *EtiquetaHandler) Desasociar(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Etiqueta no está asignada", http.StatusBadRequest)
 		return
 	}
-	_, err := h.DB.Exec(`UPDATE etiquetas SET dispositivo_id = NULL, estado = 'disponible', asignado_en = NULL WHERE id = ?`, id)
+	_, err := h.DB.Exec(`UPDATE etiquetas SET dispositivo_id = NULL, conjunto_id = NULL, estado = 'disponible', asignado_en = NULL WHERE id = ?`, id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -335,8 +383,44 @@ func (h *EtiquetaHandler) Escanear(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	// id puede venir con prefijo ET-xxxx o UUID completo; buscar por id o codigo_barras
 	var e models.Etiqueta
-	err := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE id = ? OR codigo_barras = ?`, id, strings.ToUpper(id)).Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
+	err := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, conjunto_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE id = ? OR codigo_barras = ?`, id, strings.ToUpper(id)).Scan(&e.ID, &e.Version, &e.Estado, &e.DispositivoID, &e.ConjuntoID, &e.CodigoBarras, &e.GeneradoEn, &e.ImpresoEn, &e.AsignadoEn)
 	if err == sql.ErrNoRows {
+		// Fallback: verificar si es codigo_activo o numero_serie directo de dispositivo
+		var d models.Dispositivo
+		errD := h.DB.QueryRow(`SELECT id, codigo_activo, numero_serie, tipo, marca, modelo, COALESCE(especificaciones,''), valor_compra, proveedor, estado, ubicacion, asignado_a, fecha_compra, fecha_baja, motivo_baja, parent_id, tipo_componente, sede, creado_en, actualizado_en FROM dispositivos WHERE codigo_activo = ? OR numero_serie = ? OR id = ?`, id, id, id).
+			Scan(&d.ID, &d.CodigoActivo, &d.NumeroSerie, &d.Tipo, &d.Marca, &d.Modelo, &d.Especificaciones, &d.ValorCompra, &d.Proveedor, &d.Estado, &d.Ubicacion, &d.AsignadoA, &d.FechaCompra, &d.FechaBaja, &d.MotivoBaja, &d.ParentID, &d.TipoComponente, &d.Sede, &d.CreadoEn, &d.ActualizadoEn)
+		if errD == nil {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": nil, "dispositivo": d, "conjunto": nil, "mensaje": "Dispositivo identificado directamente por código/serie"})
+			return
+		}
+
+		// Fallback 2: verificar si es codigo de conjunto (caja)
+		var cID, codigo, nombre, unidad string
+		var categoria, ubicacion, sede sql.NullString
+		var cant, cantMin int
+		errC := h.DB.QueryRow(`SELECT id, codigo, nombre, categoria, unidad, cantidad_actual, cantidad_minima, ubicacion, sede FROM conjuntos WHERE codigo = ? OR id = ?`, strings.ToUpper(id), id).
+			Scan(&cID, &codigo, &nombre, &categoria, &unidad, &cant, &cantMin, &ubicacion, &sede)
+		if errC == nil {
+			estado := estadoConjunto(cant, cantMin)
+			conj := map[string]interface{}{
+				"id": cID, "codigo": codigo, "nombre": nombre, "unidad": unidad,
+				"cantidad_actual": cant, "cantidad_minima": cantMin, "estado": estado,
+			}
+			if categoria.Valid {
+				conj["categoria"] = categoria.String
+			}
+			if ubicacion.Valid {
+				conj["ubicacion"] = ubicacion.String
+			}
+			if sede.Valid {
+				conj["sede"] = sede.String
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": nil, "dispositivo": nil, "conjunto": conj, "mensaje": "Conjunto identificado directamente por código"})
+			return
+		}
+
 		http.Error(w, "Etiqueta no encontrada", http.StatusNotFound)
 		return
 	}
@@ -345,9 +429,43 @@ func (h *EtiquetaHandler) Escanear(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// si no está asignada, retornar etiqueta sin dispositivo
-	if e.DispositivoID == nil {
+	if e.DispositivoID == nil && e.ConjuntoID == nil {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": nil, "mensaje": "Etiqueta sin asignar. Asóciela a un dispositivo."})
+		json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": nil, "conjunto": nil, "mensaje": "Etiqueta sin asignar. Asóciela a un dispositivo o conjunto (caja)."})
+		return
+	}
+	// QR pegado en una caja (conjunto): retornar info del stock
+	if e.ConjuntoID != nil {
+		var cID, codigo, nombre, unidad string
+		var categoria, ubicacion, sede sql.NullString
+		var cant, cantMin int
+		err := h.DB.QueryRow(`SELECT id, codigo, nombre, categoria, unidad, cantidad_actual, cantidad_minima, ubicacion, sede FROM conjuntos WHERE id = ?`, *e.ConjuntoID).
+			Scan(&cID, &codigo, &nombre, &categoria, &unidad, &cant, &cantMin, &ubicacion, &sede)
+		if err == sql.ErrNoRows {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": nil, "conjunto": nil, "error": "Conjunto asociado no encontrado"})
+			return
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		estado := estadoConjunto(cant, cantMin)
+		conj := map[string]interface{}{
+			"id": cID, "codigo": codigo, "nombre": nombre, "unidad": unidad,
+			"cantidad_actual": cant, "cantidad_minima": cantMin, "estado": estado,
+		}
+		if categoria.Valid {
+			conj["categoria"] = categoria.String
+		}
+		if ubicacion.Valid {
+			conj["ubicacion"] = ubicacion.String
+		}
+		if sede.Valid {
+			conj["sede"] = sede.String
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{"etiqueta": e, "dispositivo": nil, "conjunto": conj, "mensaje": "Conjunto (caja) con stock " + fmt.Sprintf("%d %s", cant, unidad)})
 		return
 	}
 	var d models.Dispositivo

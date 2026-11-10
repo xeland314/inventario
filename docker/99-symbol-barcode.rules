@@ -1,0 +1,5 @@
+# Regla udev para escáner de códigos de barras Symbol Technologies USB (05e0:1200)
+# Permite lectura/escritura a los dispositivos de entrada evdev para usuarios del grupo plugdev / input sin requerir root
+
+SUBSYSTEM=="input", ATTRS{idVendor}=="05e0", ATTRS{idProduct}=="1200", MODE="0666", GROUP="input"
+KERNEL=="event*", ATTRS{idVendor}=="05e0", ATTRS{idProduct}=="1200", MODE="0666", GROUP="input"

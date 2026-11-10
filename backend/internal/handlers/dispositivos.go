@@ -159,7 +159,7 @@ func (h *DispositivoHandler) Obtener(w http.ResponseWriter, r *http.Request) {
 	}
 	// Cargar etiqueta asociada (QR/UUID pegado al item)
 	var et models.Etiqueta
-	errEti := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE dispositivo_id = ?`, id).Scan(&et.ID, &et.Version, &et.Estado, &et.DispositivoID, &et.CodigoBarras, &et.GeneradoEn, &et.ImpresoEn, &et.AsignadoEn)
+	errEti := h.DB.QueryRow(`SELECT id, version, estado, dispositivo_id, conjunto_id, codigo_barras, generado_en, impreso_en, asignado_en FROM etiquetas WHERE dispositivo_id = ?`, id).Scan(&et.ID, &et.Version, &et.Estado, &et.DispositivoID, &et.ConjuntoID, &et.CodigoBarras, &et.GeneradoEn, &et.ImpresoEn, &et.AsignadoEn)
 	if errEti == nil {
 		d.Etiqueta = &et
 	}

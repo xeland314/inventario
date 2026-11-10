@@ -1,0 +1,20 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ConjuntosManager from '../components/ConjuntosManager';
+---
+<Layout title="Conjuntos por Caja">
+  <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <header class="flex flex-col sm:flex-row justify-between gap-3">
+      <div>
+        <h1 class="text-3xl font-black text-slate-900 inline-flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg> Conjuntos por Caja</h1>
+        <p class="text-sm text-slate-500 mt-1">Stock a granel (tornillos, resistores...) etiquetado <strong>por caja</strong> con QR del pool + contador con <strong>IA local</strong> (navegador o VLM tipo Ollama). La IA propone, tú confirmas.</p>
+      </div>
+      <div class="flex gap-2 items-start">
+        <a href="/frascos" class="text-xs bg-white border border-slate-200 px-4 py-2 rounded-full font-semibold hover:bg-slate-50">Frascos</a>
+        <a href="/etiquetas" class="text-xs bg-white border border-slate-200 px-4 py-2 rounded-full font-semibold hover:bg-slate-50">Etiquetas (QR)</a>
+        <a href="/" class="text-xs bg-slate-900 text-white px-4 py-2 rounded-full font-semibold">← Inventario</a>
+      </div>
+    </header>
+    <ConjuntosManager client:load />
+  </main>
+</Layout>

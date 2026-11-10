@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import Escaner from './Escaner';
 import DeviceSearchCombobox from './DeviceSearchCombobox';
+import ConjuntoSearchCombobox from './ConjuntoSearchCombobox';
 import { FileText, Link2, Printer, Tag } from 'lucide-react';
 
 interface Etiqueta {
@@ -23,6 +24,8 @@ export default function EtiquetasManager(): React.JSX.Element {
   const [scanned, setScanned] = useState<Record<string, unknown> | null>(null);
   const [asociarId, setAsociarId] = useState<string>('');
   const [dispositivoId, setDispositivoId] = useState<string>('');
+  const [conjuntoId, setConjuntoId] = useState<string>('');
+  const [objetivo, setObjetivo] = useState<'dispositivo' | 'conjunto'>('dispositivo');
 
   const fetchEtiquetas = async (estado: string = filtro): Promise<void> => {
     setLoading(true);
@@ -55,11 +58,14 @@ export default function EtiquetasManager(): React.JSX.Element {
 
   const handleAsociar = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    if (!asociarId || !dispositivoId) return alert('Faltan IDs');
+    if (!asociarId) return alert('Falta el ID de la etiqueta');
+    if (objetivo === 'dispositivo' && !dispositivoId) return alert('Falta el dispositivo');
+    if (objetivo === 'conjunto' && !conjuntoId) return alert('Falta el conjunto (caja)');
+    const body = objetivo === 'dispositivo' ? { dispositivo_id: dispositivoId } : { conjunto_id: conjuntoId };
     const res = await fetch(`/api/etiquetas/${asociarId}/asociar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dispositivo_id: dispositivoId }),
+      body: JSON.stringify(body),
     });
     if (res.ok) {
       alert('✓ Etiqueta asociada');
@@ -79,7 +85,7 @@ export default function EtiquetasManager(): React.JSX.Element {
   };
 
   const handleDesasociar = async (id: string): Promise<void> => {
-    if (!confirm('¿Desasociar etiqueta del dispositivo?')) return;
+    if (!confirm('¿Desasociar etiqueta? Queda libre para reutilizar.')) return;
     const res = await fetch(`/api/etiquetas/${id}/desasociar`, { method: 'POST' });
     if (res.ok) void fetchEtiquetas(filtro);
   };
@@ -260,15 +266,35 @@ export default function EtiquetasManager(): React.JSX.Element {
       )}
 
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 print:hidden">
-        <h3 className="font-bold mb-3 text-sm sm:text-base inline-flex items-center gap-2"><Link2 className="w-4 h-4" /> Asociar etiqueta a dispositivo</h3>
+        <h3 className="font-bold mb-3 text-sm sm:text-base inline-flex items-center gap-2"><Link2 className="w-4 h-4" /> Asociar etiqueta a dispositivo o conjunto</h3>
+        <div className="flex gap-1.5 mb-3 bg-slate-100 rounded-full p-1 w-fit">
+          {(['dispositivo', 'conjunto'] as const).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setObjetivo(t)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold ${objetivo === t ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              {t === 'dispositivo' ? 'Dispositivo (activo único)' : 'Conjunto (caja con stock)'}
+            </button>
+          ))}
+        </div>
         <form onSubmit={handleAsociar} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input value={asociarId} onChange={(e) => setAsociarId(e.target.value)} placeholder="UUID etiqueta (escaneado)" className="border border-slate-200 rounded-xl px-3 py-3 min-h-[44px] text-sm font-mono focus:border-sky-500 focus:outline-none" />
-          <DeviceSearchCombobox value={dispositivoId} onChange={(id) => setDispositivoId(id)} placeholder="Buscar compu, disco, GGM-... o pegar UUID" label="" />
+          {objetivo === 'dispositivo' ? (
+            <DeviceSearchCombobox value={dispositivoId} onChange={(id) => setDispositivoId(id)} placeholder="Buscar compu, disco, GGM-... o pegar UUID" label="" />
+          ) : (
+            <ConjuntoSearchCombobox value={conjuntoId} onChange={(id) => setConjuntoId(id)} placeholder="Buscar tornillos, CJ-... o pegar UUID" label="" />
+          )}
           <button type="submit" className="bg-sky-600 text-white rounded-full px-5 py-3 min-h-[44px] text-sm hover:bg-sky-500 touch-manipulation">
             Asociar
           </button>
         </form>
-        <p className="text-xs text-slate-400 mt-2">Busca escribiendo “compu”, “disco”, “GGM-COM” o pega el UUID. También funciona con ID completo.</p>
+        <p className="text-xs text-slate-400 mt-2">
+          {objetivo === 'dispositivo'
+            ? 'Busca escribiendo “compu”, “disco”, “GGM-COM” o pega el UUID. También funciona con ID completo.'
+            : 'Busca escribiendo “tornillos”, “CJ-” o pega el UUID. La etiqueta se pega en la caja física: al escanearla verás el stock del conjunto.'}
+        </p>
       </div>
 
       {/* Vista pantalla */}

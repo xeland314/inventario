@@ -83,6 +83,7 @@ CREATE TABLE IF NOT EXISTS etiquetas (
     version INTEGER NOT NULL CHECK (version IN (4,7)),
     estado TEXT NOT NULL CHECK (estado IN ('disponible','impreso','asignado','anulado')) DEFAULT 'disponible',
     dispositivo_id TEXT UNIQUE REFERENCES dispositivos(id) ON DELETE SET NULL,
+    conjunto_id TEXT REFERENCES conjuntos(id) ON DELETE SET NULL,
     codigo_barras TEXT UNIQUE,
     generado_en TEXT NOT NULL DEFAULT (datetime('now')),
     impreso_en TEXT,
@@ -132,7 +133,7 @@ CREATE INDEX IF NOT EXISTS idx_reportes_etiqueta ON reportes(etiqueta_id);
 
 CREATE TABLE IF NOT EXISTS auditoria (
   id TEXT PRIMARY KEY,
-  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma')),
+  entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma','conjunto')),
   entidad_id TEXT NOT NULL,
   accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar','cerrar','escanear')),
   campo TEXT,
@@ -224,6 +225,54 @@ CREATE TABLE IF NOT EXISTS frasco_movimientos (
 );
 CREATE INDEX IF NOT EXISTS idx_frasco_mov_frasco ON frasco_movimientos(frasco_id);
 CREATE INDEX IF NOT EXISTS idx_frasco_mov_fecha ON frasco_movimientos(fecha);
+
+CREATE TABLE IF NOT EXISTS conjuntos (
+  id TEXT PRIMARY KEY,
+  codigo TEXT UNIQUE NOT NULL,
+  nombre TEXT NOT NULL,
+  categoria TEXT,
+  especificaciones TEXT,
+  unidad TEXT NOT NULL DEFAULT 'pieza' CHECK (unidad IN ('pieza','gr','ml','m','paquete')),
+  cantidad_actual INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_actual >= 0),
+  cantidad_minima INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_minima >= 0),
+  ubicacion TEXT,
+  sede TEXT,
+  proveedor TEXT,
+  costo_unitario REAL NOT NULL DEFAULT 0,
+  creado_en TEXT NOT NULL DEFAULT (datetime('now')),
+  actualizado_en TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_conjuntos_categoria ON conjuntos(categoria);
+CREATE INDEX IF NOT EXISTS idx_conjuntos_sede ON conjuntos(sede);
+CREATE INDEX IF NOT EXISTS idx_conjuntos_ubicacion ON conjuntos(ubicacion);
+CREATE TABLE IF NOT EXISTS conjunto_movimientos (
+  id TEXT PRIMARY KEY,
+  conjunto_id TEXT NOT NULL REFERENCES conjuntos(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL CHECK (tipo IN ('ingreso','consumo','ajuste','traslado','baja')),
+  cantidad INTEGER NOT NULL CHECK (cantidad != 0),
+  cantidad_previa INTEGER NOT NULL,
+  cantidad_nueva INTEGER NOT NULL,
+  realizado_por TEXT,
+  nota TEXT,
+  fecha TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_conjunto_mov_conjunto ON conjunto_movimientos(conjunto_id);
+CREATE INDEX IF NOT EXISTS idx_conjunto_mov_fecha ON conjunto_movimientos(fecha);
+CREATE TABLE IF NOT EXISTS conteos (
+  id TEXT PRIMARY KEY,
+  conjunto_id TEXT NOT NULL REFERENCES conjuntos(id) ON DELETE CASCADE,
+  foto_evidencia_id TEXT REFERENCES fotos_evidencia(id) ON DELETE SET NULL,
+  cantidad_detectada INTEGER NOT NULL DEFAULT 0,
+  cantidad_confirmada INTEGER NOT NULL CHECK (cantidad_confirmada >= 0),
+  modelo TEXT NOT NULL DEFAULT 'manual',
+  detecciones_json TEXT,
+  nota TEXT,
+  creado_por TEXT,
+  creado_en TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_conteos_conjunto ON conteos(conjunto_id);
+CREATE INDEX IF NOT EXISTS idx_conteos_fecha ON conteos(creado_en);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_etiquetas_conjunto ON etiquetas(conjunto_id) WHERE conjunto_id IS NOT NULL;
 `
 
 func InitDB(database *sql.DB) error {
@@ -348,13 +397,27 @@ func InitDB(database *sql.DB) error {
 	database.Exec(`CREATE TABLE IF NOT EXISTS frasco_movimientos (id TEXT PRIMARY KEY, frasco_id TEXT NOT NULL REFERENCES frascos(id) ON DELETE CASCADE, tipo TEXT NOT NULL CHECK (tipo IN ('ingreso','consumo','ajuste','traslado','baja')), cantidad INTEGER NOT NULL CHECK (cantidad != 0), cantidad_previa INTEGER NOT NULL, cantidad_nueva INTEGER NOT NULL, dispositivo_id TEXT REFERENCES dispositivos(id) ON DELETE SET NULL, realizado_por TEXT, nota TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frasco_mov_frasco ON frasco_movimientos(frasco_id)`)
 	database.Exec(`CREATE INDEX IF NOT EXISTS idx_frasco_mov_fecha ON frasco_movimientos(fecha)`)
-	// Migración auditoria para incluir entidad 'toma' y accion 'cerrar'/'escanear' si tabla vieja existe
+	// Conjuntos: stock a granel por caja (tornillos, resistores...) con etiqueta QR en la caja
+	database.Exec(`CREATE TABLE IF NOT EXISTS conjuntos (id TEXT PRIMARY KEY, codigo TEXT UNIQUE NOT NULL, nombre TEXT NOT NULL, categoria TEXT, especificaciones TEXT, unidad TEXT NOT NULL DEFAULT 'pieza' CHECK (unidad IN ('pieza','gr','ml','m','paquete')), cantidad_actual INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_actual >= 0), cantidad_minima INTEGER NOT NULL DEFAULT 0 CHECK (cantidad_minima >= 0), ubicacion TEXT, sede TEXT, proveedor TEXT, costo_unitario REAL NOT NULL DEFAULT 0, creado_en TEXT NOT NULL DEFAULT (datetime('now')), actualizado_en TEXT)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conjuntos_categoria ON conjuntos(categoria)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conjuntos_sede ON conjuntos(sede)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conjuntos_ubicacion ON conjuntos(ubicacion)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS conjunto_movimientos (id TEXT PRIMARY KEY, conjunto_id TEXT NOT NULL REFERENCES conjuntos(id) ON DELETE CASCADE, tipo TEXT NOT NULL CHECK (tipo IN ('ingreso','consumo','ajuste','traslado','baja')), cantidad INTEGER NOT NULL CHECK (cantidad != 0), cantidad_previa INTEGER NOT NULL, cantidad_nueva INTEGER NOT NULL, realizado_por TEXT, nota TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conjunto_mov_conjunto ON conjunto_movimientos(conjunto_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conjunto_mov_fecha ON conjunto_movimientos(fecha)`)
+	database.Exec(`CREATE TABLE IF NOT EXISTS conteos (id TEXT PRIMARY KEY, conjunto_id TEXT NOT NULL REFERENCES conjuntos(id) ON DELETE CASCADE, foto_evidencia_id TEXT REFERENCES fotos_evidencia(id) ON DELETE SET NULL, cantidad_detectada INTEGER NOT NULL DEFAULT 0, cantidad_confirmada INTEGER NOT NULL CHECK (cantidad_confirmada >= 0), modelo TEXT NOT NULL DEFAULT 'manual', detecciones_json TEXT, nota TEXT, creado_por TEXT, creado_en TEXT NOT NULL DEFAULT (datetime('now')))`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conteos_conjunto ON conteos(conjunto_id)`)
+	database.Exec(`CREATE INDEX IF NOT EXISTS idx_conteos_fecha ON conteos(creado_en)`)
+	// Etiquetas del pool reutilizables para cajas: columna conjunto_id + UNIQUE parcial (ADD COLUMN no permite UNIQUE inline)
+	database.Exec(`ALTER TABLE etiquetas ADD COLUMN conjunto_id TEXT REFERENCES conjuntos(id) ON DELETE SET NULL`)
+	database.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_etiquetas_conjunto ON etiquetas(conjunto_id) WHERE conjunto_id IS NOT NULL`)
+	// Migración auditoria para incluir entidad 'toma'/'conjunto' y accion 'cerrar'/'escanear' si tabla vieja existe
 	func() {
 		var sqlDef string
 		if err := database.QueryRow(`SELECT sql FROM sqlite_master WHERE type='table' AND name='auditoria'`).Scan(&sqlDef); err == nil && sqlDef != "" {
-			if !strings.Contains(sqlDef, "'toma'") || !strings.Contains(sqlDef, "'cerrar'") {
-				database.Exec(`CREATE TABLE IF NOT EXISTS auditoria_new (id TEXT PRIMARY KEY, entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma')), entidad_id TEXT NOT NULL, accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar','cerrar','escanear')), campo TEXT, valor_anterior TEXT, valor_nuevo TEXT, usuario_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL, username TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
-				database.Exec(`INSERT OR IGNORE INTO auditoria_new SELECT * FROM auditoria`)
+			if !strings.Contains(sqlDef, "'toma'") || !strings.Contains(sqlDef, "'cerrar'") || !strings.Contains(sqlDef, "'conjunto'") {
+				database.Exec(`CREATE TABLE IF NOT EXISTS auditoria_new (id TEXT PRIMARY KEY, entidad TEXT NOT NULL CHECK (entidad IN ('dispositivo','movimiento','mantenimiento','etiqueta','reporte','usuario','tinta','evidencia','plan','toma','conjunto')), entidad_id TEXT NOT NULL, accion TEXT NOT NULL CHECK (accion IN ('crear','actualizar','eliminar','baja','asociar','desasociar','impreso','anulado','traslado','reportar','cancelar','resolver','generar','cerrar','escanear')), campo TEXT, valor_anterior TEXT, valor_nuevo TEXT, usuario_id TEXT REFERENCES usuarios(id) ON DELETE SET NULL, username TEXT, fecha TEXT NOT NULL DEFAULT (datetime('now')))`)
+				database.Exec(`INSERT OR IGNORE INTO auditoria_new SELECT id, entidad, entidad_id, accion, campo, valor_anterior, valor_nuevo, usuario_id, username, fecha FROM auditoria`)
 				database.Exec(`DROP TABLE auditoria`)
 				database.Exec(`ALTER TABLE auditoria_new RENAME TO auditoria`)
 				database.Exec(`CREATE INDEX IF NOT EXISTS idx_auditoria_entidad ON auditoria(entidad, entidad_id)`)

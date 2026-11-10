@@ -1,0 +1,197 @@
+---
+// Hoja imprimible de códigos de barras para calibración y pruebas físicas del escáner Symbol USB
+const sampleProducts = [
+  { code: '7501031311309', format: 'ean13', name: 'Refresco Coca-Cola 600ml', category: 'Bebidas' },
+  { code: '7501000111203', format: 'ean13', name: 'Pan Blanco de Caja Bimbo Grande', category: 'Panadería' },
+  { code: '7501008045612', format: 'ean13', name: 'Leche Entera Alpura 1L', category: 'Lácteos' },
+  { code: '9780132350884', format: 'ean13', name: 'Libro: Clean Code (Robert C. Martin)', category: 'Libros' },
+  { code: '012345678905', format: 'upca', name: 'Cereal Cheerios Avena 500g', category: 'Despensa' },
+  { code: '049000000443', format: 'upca', name: 'Bebida Sprite Lima-Limón 355ml', category: 'Bebidas' },
+  { code: 'SKU-LAPTOP-M3', format: 'code128', name: 'Laptop ThinkPad Ultra 16"', category: 'Electrónica' },
+  { code: 'SN-SYM-05E0-1200', format: 'code128', name: 'Escáner Symbol Technologies USB', category: 'Hardware POS' },
+  { code: 'PKG-FEDEX-98214', format: 'code128', name: 'Paquete FedEx Prioritario', category: 'Logística' },
+  { code: 'MOTOR-MOD44', format: 'code39', name: 'Motor NEMA 23 Paso a Paso', category: 'Componentes' },
+  { code: 'LOTE-OCT-2026', format: 'code39', name: 'Materia Prima Polímero Grado A', category: 'Insumos' },
+  { code: '96385074', format: 'ean8', name: 'Chicles Trident Menta 18s', category: 'Golosinas' },
+  { code: '12345670', format: 'ean8', name: 'Barra Chocolate Amargo 30g', category: 'Confitería' },
+  { code: 'https://github.com', format: 'qrcode', name: 'Enlace GitHub Repositorio', category: 'Digital 2D' },
+  { code: 'PROD:SYM-SCAN;LOTE:2026;PRECIO:1250', format: 'qrcode', name: 'Ficha Técnica Estructurada Symbol', category: 'Digital 2D' },
+];
+---
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hoja de Códigos de Barras para Pruebas - Symbol Scanner</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 1cm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 2rem;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 1rem;
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.25rem;
+    }
+    .header p {
+      font-size: 0.85rem;
+      color: #475569;
+    }
+    .instructions {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.4;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px dashed #94a3b8;
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+    .card-title {
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+    .card-desc {
+      font-size: 0.75rem;
+      color: #64748b;
+      margin-bottom: 0.5rem;
+    }
+    .barcode-box {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 85px;
+      margin-bottom: 0.4rem;
+    }
+    .barcode-box img {
+      max-width: 100%;
+      height: auto;
+      max-height: 95px;
+    }
+    .code-text {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 8px;
+      background: #0f172a;
+      color: #ffffff;
+      border-radius: 4px;
+      margin-top: 0.35rem;
+    }
+    .print-btn-bar {
+      margin-bottom: 1.5rem;
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+    }
+    .btn {
+      padding: 0.6rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .btn:hover {
+      background: #0369a1;
+    }
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .print-btn-bar, .instructions {
+        display: none !important;
+      }
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
+      .card {
+        border: 1px solid #000;
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-btn-bar">
+    <button class="btn" onclick="window.print()">
+      🖨️ Imprimir Hoja de Pruebas (Ctrl + P)
+    </button>
+    <a href="/escaner" class="btn" style="background: #475569; text-decoration: none;">
+      ← Volver al Escáner
+    </a>
+  </div>
+
+  <div class="header">
+    <h1>Hoja de Pruebas para Escáner de Código de Barras</h1>
+    <p>Inventario de Tecnología • Lector Symbol Technologies USB (05e0:1200) • Formatos 1D / 2D</p>
+  </div>
+
+  <div class="instructions">
+    <strong>💡 Recomendación de uso:</strong> Imprime esta hoja en papel para una lectura nítida con el haz láser del lector Symbol, o apunta el lector directamente a los códigos mostrados en pantalla manteniendo una distancia de <strong>10 a 25 cm</strong>.<br />
+    <em>Nota:</em> Los escáneres láser lineales 1D (como Symbol LS2208) leen barras 1D (EAN, Code 128, Code 39, UPC); los lectores matriciales 2D (imagers) también leen matrices QR.
+  </div>
+
+  <div class="grid">
+    {sampleProducts.map((prod) => (
+      <div class="card">
+        <div class="card-title">{prod.name}</div>
+        <div class="card-desc">{prod.category}</div>
+        <div class="barcode-box">
+          <img src={`/api/barcode/${prod.format}/${encodeURIComponent(prod.code)}.svg`} alt={prod.code} />
+        </div>
+        <div class="code-text">{prod.code}</div>
+        <span class="badge">{prod.format.toUpperCase()}</span>
+      </div>
+    ))}
+  </div>
+</body>
+</html>

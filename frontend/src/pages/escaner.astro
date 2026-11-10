@@ -2,21 +2,39 @@
 import Layout from '../layouts/Layout.astro';
 import Escaner from '../components/Escaner';
 ---
-<Layout title="Escáner">
-  <main class="max-w-3xl mx-auto p-6 space-y-6">
-    <h1 class="text-2xl font-bold inline-flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg> Escáner rápido</h1>
-    <p class="text-sm text-slate-500">Escanea QR de etiqueta (UUID v4/v7 o ET-XXXX) y abre el dispositivo asociado.</p>
-    <div id="escaner-mount"></div>
-    <Escaner client:load onDeviceFound={(data) => {
-      // handled inside Escaner, extra redirect if needed via window
-    }} />
-    <script is:inline>
-      // Escucha evento de escaneo y redirige si hay dispositivo
-      window.addEventListener('message', (e) => {
-        if (e.data && e.data.dispositivo) {
-          window.location.href = '/dispositivos/' + e.data.dispositivo.id;
-        }
-      });
-    </script>
+<Layout title="Escáner de Código de Barras">
+  <main class="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 inline-flex items-center gap-2.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-sky-600">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+            <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+            <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+          </svg>
+          Escáner de Código de Barras y Etiquetas
+        </h1>
+        <p class="text-sm text-slate-500 mt-1">
+          Compatible con lector láser USB Symbol Technologies (05e0:1200), emulación de teclado wedge, códigos 1D (EAN/Code 128/Code 39) y cámara móvil.
+        </p>
+      </div>
+
+      <a
+        href="/escaner/imprimible"
+        target="_blank"
+        rel="noreferrer"
+        class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 shadow-sm self-start sm:self-auto transition-colors"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Hoja Imprimible (Ctrl+P)
+      </a>
+    </div>
+
+    <Escaner client:load />
   </main>
 </Layout>

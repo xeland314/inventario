@@ -104,10 +104,84 @@ type Etiqueta struct {
 	Version       int     `json:"version"`
 	Estado        string  `json:"estado"`
 	DispositivoID *string `json:"dispositivo_id"`
+	ConjuntoID    *string `json:"conjunto_id"`
 	CodigoBarras  *string `json:"codigo_barras"`
 	GeneradoEn    string  `json:"generado_en"`
 	ImpresoEn     *string `json:"impreso_en"`
 	AsignadoEn    *string `json:"asignado_en"`
+}
+
+// --- Conjuntos: stock a granel por caja (tornillos, resistores...) ---
+
+var UnidadesConjuntoValidas = map[string]bool{
+	"pieza":   true,
+	"gr":      true,
+	"ml":      true,
+	"m":       true,
+	"paquete": true,
+}
+
+func EsUnidadConjuntoValida(u string) bool {
+	return UnidadesConjuntoValidas[u]
+}
+
+var TiposConjuntoMovValidos = map[string]bool{
+	"ingreso":  true,
+	"consumo":  true,
+	"ajuste":   true,
+	"traslado": true,
+	"baja":     true,
+}
+
+func EsTipoConjuntoMovValido(t string) bool {
+	return TiposConjuntoMovValidos[t]
+}
+
+type Conjunto struct {
+	ID              string              `json:"id"`
+	Codigo          string              `json:"codigo"`
+	Nombre          string              `json:"nombre"`
+	Categoria       *string             `json:"categoria"`
+	Especificaciones *string            `json:"especificaciones"`
+	Unidad          string              `json:"unidad"`
+	CantidadActual  int                 `json:"cantidad_actual"`
+	CantidadMinima  int                 `json:"cantidad_minima"`
+	Ubicacion       *string             `json:"ubicacion"`
+	Sede            *string             `json:"sede"`
+	Proveedor       *string             `json:"proveedor"`
+	CostoUnitario   float64             `json:"costo_unitario"`
+	CreadoEn        string              `json:"creado_en"`
+	ActualizadoEn   *string             `json:"actualizado_en"`
+	Estado          string              `json:"estado"`
+	EtiquetaID      *string             `json:"etiqueta_id"`
+	EtiquetaCodigo  *string             `json:"etiqueta_codigo"`
+	Movimientos     []ConjuntoMovimiento `json:"movimientos,omitempty"`
+	Conteos         []Conteo            `json:"conteos,omitempty"`
+}
+
+type ConjuntoMovimiento struct {
+	ID              string  `json:"id"`
+	ConjuntoID      string  `json:"conjunto_id"`
+	Tipo            string  `json:"tipo"`
+	Cantidad        int     `json:"cantidad"`
+	CantidadPrevia  int     `json:"cantidad_previa"`
+	CantidadNueva   int     `json:"cantidad_nueva"`
+	RealizadoPor    *string `json:"realizado_por"`
+	Nota            *string `json:"nota"`
+	Fecha           string  `json:"fecha"`
+}
+
+type Conteo struct {
+	ID                string  `json:"id"`
+	ConjuntoID        string  `json:"conjunto_id"`
+	FotoEvidenciaID   *string `json:"foto_evidencia_id"`
+	CantidadDetectada int     `json:"cantidad_detectada"`
+	CantidadConfirmada int    `json:"cantidad_confirmada"`
+	Modelo            string  `json:"modelo"`
+	DeteccionesJSON   *string `json:"detecciones_json"`
+	Nota              *string `json:"nota"`
+	CreadoPor         *string `json:"creado_por"`
+	CreadoEn          string  `json:"creado_en"`
 }
 
 type Dispositivo struct {
